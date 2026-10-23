@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f8f5f0">
+  <title>My Dressing</title>
+  <style>
+    :root {
+      --bg: #f8f5f0;
+      --card: #fff;
+      --ink: #292721;
+      --muted: #817d75;
+      --accent: #765b49;
+      --line: #e9e3dc;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    header {
+      position: sticky; top: 0; z-index: 2;
+      padding: 18px 18px 12px;
+      background: rgba(248,245,240,.96);
+      border-bottom: 1px solid var(--line);
+    }
+    .topline { display:flex; justify-content:space-between; align-items:center; }
+    h1 { margin:0; font-size:23px; letter-spacing:-.5px; }
+    .subtitle { margin:4px 0 0; color:var(--muted); font-size:13px; }
+    main { max-width:760px; margin:auto; padding:18px 16px 100px; }
+    .tabs { display:flex; gap:8px; margin:0 0 18px; }
+    button, select, input { font:inherit; }
+    .tab, .filter, .action {
+      border:1px solid var(--line); background:var(--card); color:var(--ink);
+      border-radius:14px; padding:10px 14px; cursor:pointer;
+    }
+    .tab.active { background:var(--ink); color:white; border-color:var(--ink); }
+    .section-head { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+    h2 { font-size:18px; margin:0 0 12px; }
+    .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+    @media(min-width:600px) { .grid { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+    .item {
+      background:var(--card); border:1px solid var(--line); border-radius:18px;
+      overflow:hidden; position:relative;
+    }
+    .item img { width:100%; aspect-ratio:1/1; object-fit:cover; display:block; background:#eee9e2; }
+    .item-info { padding:10px 11px 12px; }
+    .item-name { font-weight:650; font-size:14px; overflow-wrap:anywhere; }
+    .item-type { color:var(--muted); font-size:12px; margin-top:2px; }
+    .delete {
+      position:absolute; top:8px; right:8px; border:0; border-radius:99px;
+      background:#fff; width:32px; height:32px; font-size:18px; cursor:pointer;
+    }
+    .empty {
+      text-align:center; padding:35px 18px; color:var(--muted);
+      background:var(--card); border:1px dashed #d9d0c6; border-radius:18px;
+    }
+    .empty strong { display:block; color:var(--ink); margin-bottom:6px; }
+    .add-card {
+      margin-top:18px; padding:16px; border-radius:18px; background:var(--card);
+      border:1px solid var(--line);
+    }
+    label { display:block; font-size:13px; font-weight:600; margin:12px 0 6px; }
+    input[type="text"], select {
+      width:100%; padding:12px; border:1px solid var(--line);
+      border-radius:12px; background:white; color:var(--ink);
+    }
+    input[type="file"] { width:100%; font-size:13px; }
+    .primary {
+      width:100%; margin-top:14px; padding:13px; border:0; border-radius:14px;
+      background:var(--accent); color:white; font-weight:700; cursor:pointer;
+    }
+    .hint { color:var(--muted); font-size:12px; line-height:1.5; margin:12px 2px 0; }
+    .outfit-card {
+      background:var(--card); border:1px solid var(--line);
+      border-radius:18px; padding:14px; margin-bottom:12px;
+    }
+    .outfit-card h3 { margin:0 0 12px; font-size:15px; }
+    .outfit-pieces { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
+    .outfit-pieces img { width:100%; aspect-ratio:1; object-fit:cover; border-radius:12px; }
+    .hidden { display:none !important; }
+    .bottom-note { text-align:center; color:var(--muted); font-size:11px; margin:25px 0; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="topline">
+      <h1>My Dressing</h1>
+      <span aria-hidden="true">🧥</span>
+    </div>
+    <p class="subtitle">Your wardrobe, right in your pocket</p>
+  </header>
+
+  <main>
+    <nav class="tabs" aria-label="App sections">
+      <button class="tab active" id="closetTab">My closet</button>
+      <button class="tab" id="outfitTab">Outfits</button>
+    </nav>
+
+    <section id="closetView">
+      <div class="section-head">
+        <h2>Your clothes</h2>
+        <select class="filter" id="filter">
+          <option value="All">All items</option>
+          <option>Tops</option><option>Bottoms</option><option>Dresses</option>
+          <option>Shoes</option><option>Outerwear</option><option>Accessories</option>
+        </select>
+      </div>
+      <div id="items" class="grid"></div>
+
+      <form class="add-card" id="addForm">
+        <h2>Add a clothing item</h2>
+        <label for="photo">Photo</label>
+        <input id="photo" type="file" accept="image/*" required>
+        <label for="name">Name (optional)</label>
+        <input id="name" type="text" placeholder="e.g. Blue jeans">
+        <label for="category">Category</label>
+        <select id="category">
+          <option>Tops</option><option>Bottoms</option><option>Dresses</option>
+          <option>Shoes</option><option>Outerwear</option><option>Accessories</option>
+        </select>
+        <button class="primary" type="submit">Add to my closet</button>
+        <p class="hint">Photos are saved in this browser on this device. They are not uploaded to GitHub. Clearing browser data may delete them.</p>
+      </form>
+    </section>
+
+    <section id="outfitView" class="hidden">
+      <div class="section-head">
+        <h2>Outfit ideas</h2>
+        <button class="action" id="makeOutfit">✨ Make an outfit</button>
+      </div>
+      <div id="outfits"></div>
+      <div class="empty" id="outfitEmpty">
+        <strong>No outfit yet</strong>
+        Add some clothes, then tap “Make an outfit.”
+      </div>
+    </section>
+
+    <p class="bottom-note">Stored locally in this browser · Not synced between devices</p>
+  </main>
+
+<script>
+  const DB_NAME = "my-dressing-local";
+  const STORE = "clothes";
+  let db;
+
+  function openDB() {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open(DB_NAME, 1);
+      request.onupgradeneeded = () => request.result.createObjectStore(STORE, { keyPath: "id" });
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
+  function allItems() {
+    return new Promise((resolve, reject) => {
+      const request = db.transaction(STORE).objectStore(STORE).getAll();
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
+  function saveItem(item) {
+    return new Promise((resolve, reject) => {
+      const request = db.transaction(STORE, "readwrite").objectStore(STORE).put(item);
+      request.onsuccess = resolve;
+      request.onerror = () => reject(request.error);
+    });
+  }
+  function removeItem(id) {
+    return new Promise((resolve, reject) => {
+      const request = db.transaction(STORE, "readwrite").objectStore(STORE).delete(id);
+      request.onsuccess = resolve;
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async function render() {
+    const list = await allItems();
+    const selected = document.getElementById("filter").value;
+    const shown = selected === "All" ? list : list.filter(x => x.category === selected);
+    const container = document.getElementById("items");
+    container.innerHTML = "";
+
+    if (!shown.length) {
+      container.innerHTML = `<div class="empty" style="grid-column:1/-1">
+        <strong>${list.length ? "No items in this category" : "Your closet is empty"}</strong>
+        Add a photo below to get started.
+      </div>`;
+      return;
+    }
+
+    shown.forEach(item => {
+      const url = URL.createObjectURL(item.photo);
+      const card = document.createElement("article");
+      card.className = "item";
+      card.innerHTML = `<button class="delete" aria-label="Delete item">×</button>
+        <img alt="">
+        <div class="item-info"><div class="item-name"></div>
+        <div class="item-type"></div></div>`;
+      card.querySelector("img").src = url;
+      card.querySelector(".item-name").textContent = item.name || item.category;
+      card.querySelector(".item-type").textContent = item.category;
+      card.querySelector(".delete").onclick = async () => {
+        await removeItem(item.id);
+        render();
+      };
+      container.appendChild(card);
+    });
+  }
+
+  document.getElementById("addForm").addEventListener("submit", async event => {
+    event.preventDefault();
+    const file = document.getElementById("photo").files[0];
+    if (!file) return;
+    await saveItem({
+      id: crypto.randomUUID(),
+      name: document.getElementById("name").value.trim(),
+      category: document.getElementById("category").value,
+      photo: file
+    });
+    event.target.reset();
+    render();
+  });
+
+  document.getElementById("filter").addEventListener("change", render);
+
+  document.getElementById("closetTab").onclick = () => {
+    closetTab.classList.add("active"); outfitTab.classList.remove("active");
+    closetView.classList.remove("hidden"); outfitView.classList.add("hidden");
+  };
+  document.getElementById("outfitTab").onclick = () => {
+    outfitTab.classList.add("active"); closetTab.classList.remove("active");
+    outfitView.classList.remove("hidden"); closetView.classList.add("hidden");
+  };
+
+  document.getElementById("makeOutfit").onclick = async () => {
+    const list = await allItems();
+    const picks = ["Tops", "Bottoms", "Shoes"].map(category => {
+      const options = list.filter(item => item.category === category);
+      return options.length ? options[Math.floor(Math.random() * options.length)] : null;
+    }).filter(Boolean);
+
+    if (!picks.length) {
+      alert("Add some clothes to your closet first.");
+      return;
+    }
+    document.getElementById("outfitEmpty").classList.add("hidden");
+    const outfit = document.createElement("div");
+    outfit.className = "outfit-card";
+    outfit.innerHTML = "<h3>Today's outfit idea</h3><div class='outfit-pieces'></div>";
+    for (const item of picks) {
+      const img = document.createElement("img");
+      img.src = URL.createObjectURL(item.photo);
+      img.alt = item.name || item.category;
+      outfit.querySelector(".outfit-pieces").appendChild(img);
+    }
+    document.getElementById("outfits").prepend(outfit);
+  };
+
+  (async () => {
+    db = await openDB();
+    render();
+  })().catch(() => alert("Your browser could not open local storage. Please try Chrome on your phone."));
+</script>
+</body>
+</html>
