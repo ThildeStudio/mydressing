@@ -1,269 +1,952 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#f8f5f0">
-  <title>My Dressing</title>
-  <style>
-    :root {
-      --bg: #f8f5f0;
-      --card: #fff;
-      --ink: #292721;
-      --muted: #817d75;
-      --accent: #765b49;
-      --line: #e9e3dc;
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      background: var(--bg);
-      color: var(--ink);
-      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-    }
-    header {
-      position: sticky; top: 0; z-index: 2;
-      padding: 18px 18px 12px;
-      background: rgba(248,245,240,.96);
-      border-bottom: 1px solid var(--line);
-    }
-    .topline { display:flex; justify-content:space-between; align-items:center; }
-    h1 { margin:0; font-size:23px; letter-spacing:-.5px; }
-    .subtitle { margin:4px 0 0; color:var(--muted); font-size:13px; }
-    main { max-width:760px; margin:auto; padding:18px 16px 100px; }
-    .tabs { display:flex; gap:8px; margin:0 0 18px; }
-    button, select, input { font:inherit; }
-    .tab, .filter, .action {
-      border:1px solid var(--line); background:var(--card); color:var(--ink);
-      border-radius:14px; padding:10px 14px; cursor:pointer;
-    }
-    .tab.active { background:var(--ink); color:white; border-color:var(--ink); }
-    .section-head { display:flex; justify-content:space-between; align-items:center; gap:12px; }
-    h2 { font-size:18px; margin:0 0 12px; }
-    .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
-    @media(min-width:600px) { .grid { grid-template-columns:repeat(3,minmax(0,1fr)); } }
-    .item {
-      background:var(--card); border:1px solid var(--line); border-radius:18px;
-      overflow:hidden; position:relative;
-    }
-    .item img { width:100%; aspect-ratio:1/1; object-fit:cover; display:block; background:#eee9e2; }
-    .item-info { padding:10px 11px 12px; }
-    .item-name { font-weight:650; font-size:14px; overflow-wrap:anywhere; }
-    .item-type { color:var(--muted); font-size:12px; margin-top:2px; }
-    .delete {
-      position:absolute; top:8px; right:8px; border:0; border-radius:99px;
-      background:#fff; width:32px; height:32px; font-size:18px; cursor:pointer;
-    }
-    .empty {
-      text-align:center; padding:35px 18px; color:var(--muted);
-      background:var(--card); border:1px dashed #d9d0c6; border-radius:18px;
-    }
-    .empty strong { display:block; color:var(--ink); margin-bottom:6px; }
-    .add-card {
-      margin-top:18px; padding:16px; border-radius:18px; background:var(--card);
-      border:1px solid var(--line);
-    }
-    label { display:block; font-size:13px; font-weight:600; margin:12px 0 6px; }
-    input[type="text"], select {
-      width:100%; padding:12px; border:1px solid var(--line);
-      border-radius:12px; background:white; color:var(--ink);
-    }
-    input[type="file"] { width:100%; font-size:13px; }
-    .primary {
-      width:100%; margin-top:14px; padding:13px; border:0; border-radius:14px;
-      background:var(--accent); color:white; font-weight:700; cursor:pointer;
-    }
-    .hint { color:var(--muted); font-size:12px; line-height:1.5; margin:12px 2px 0; }
-    .outfit-card {
-      background:var(--card); border:1px solid var(--line);
-      border-radius:18px; padding:14px; margin-bottom:12px;
-    }
-    .outfit-card h3 { margin:0 0 12px; font-size:15px; }
-    .outfit-pieces { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
-    .outfit-pieces img { width:100%; aspect-ratio:1; object-fit:cover; border-radius:12px; }
-    .hidden { display:none !important; }
-    .bottom-note { text-align:center; color:var(--muted); font-size:11px; margin:25px 0; }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>My Wardrobe</title>
+<style>
+  :root{
+    --bg:#faf7f2;
+    --surface:#ffffff;
+    --ink:#1f1b16;
+    --muted:#7a6f63;
+    --line:#e8e1d6;
+    --accent:#7a5af8;
+    --accent-soft:#ece6ff;
+    --danger:#c0392b;
+    --danger-soft:#fdecea;
+    --ok:#1f8a52;
+    --shadow:0 1px 2px rgba(0,0,0,.04),0 8px 24px rgba(0,0,0,.06);
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Helvetica,Arial,sans-serif;
+    background:var(--bg);color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+    line-height:1.45;
+  }
+  header{
+    padding:18px 20px 8px;
+    max-width:1100px;margin:0 auto;
+  }
+  header h1{
+    margin:0;font-size:22px;letter-spacing:-.01em;
+  }
+  header p{margin:4px 0 0;color:var(--muted);font-size:13px}
+  main{max-width:1100px;margin:0 auto;padding:8px 20px 60px}
+  /* tabs */
+  .tabs{
+    display:flex;gap:6px;flex-wrap:wrap;
+    border-bottom:1px solid var(--line);
+    margin:14px 0 18px;
+  }
+  .tab{
+    border:0;background:transparent;
+    padding:10px 14px;font-size:14px;color:var(--muted);
+    cursor:pointer;border-bottom:2px solid transparent;
+    border-radius:8px 8px 0 0;
+    font-weight:500;
+  }
+  .tab:hover{color:var(--ink)}
+  .tab.active{color:var(--ink);border-bottom-color:var(--accent)}
+  .tab-panel{display:none}
+  .tab-panel.active{display:block}
+  /* buttons */
+  button{font:inherit;cursor:pointer}
+  .btn{
+    background:var(--accent);color:#fff;border:0;
+    padding:9px 14px;border-radius:10px;font-weight:600;font-size:14px;
+  }
+  .btn:hover{filter:brightness(1.05)}
+  .btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+  .btn.danger{background:var(--danger)}
+  .btn.small{padding:6px 10px;font-size:13px;border-radius:8px}
+  /* form */
+  .form{
+    background:var(--surface);border:1px solid var(--line);
+    border-radius:var(--radius);padding:14px;
+    box-shadow:var(--shadow);
+    display:grid;gap:12px;
+    grid-template-columns:1fr 1fr;
+  }
+  .form .full{grid-column:1/-1}
+  .field{display:flex;flex-direction:column;gap:6px}
+  .field label{font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.02em;text-transform:uppercase}
+  .field input[type=text],
+  .field input[type=date],
+  .field select,
+  .field textarea{
+    padding:9px 10px;border:1px solid var(--line);border-radius:10px;
+    background:#fff;font-size:14px;color:var(--ink);
+    outline:none;transition:border-color .15s, box-shadow .15s;
+    width:100%;
+  }
+  .field input:focus,.field select:focus,.field textarea:focus{
+    border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);
+  }
+  .color-row{display:flex;gap:10px;align-items:center}
+  .color-row input[type=color]{
+    width:44px;height:38px;border:1px solid var(--line);border-radius:10px;
+    background:#fff;padding:2px;cursor:pointer;
+  }
+  .swatch{
+    width:22px;height:22px;border-radius:50%;
+    border:1px solid var(--line);
+  }
+  /* photo */
+  .photo-zone{
+    border:1px dashed var(--line);border-radius:10px;
+    padding:12px;text-align:center;color:var(--muted);
+    background:#fff;cursor:pointer;
+  }
+  .photo-zone input[type=file]{display:none}
+  .photo-preview{
+    width:100%;max-height:200px;object-fit:cover;border-radius:10px;
+    margin-top:8px;display:none;
+  }
+  /* toolbar */
+  .toolbar{
+    display:flex;flex-wrap:wrap;gap:8px;align-items:center;
+    margin:14px 0 12px;
+  }
+  .toolbar .grow{flex:1}
+  .toolbar input[type=search]{
+    padding:9px 12px;border:1px solid var(--line);border-radius:10px;
+    background:#fff;min-width:200px;
+  }
+  /* category chips */
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 0}
+  .chip{
+    display:inline-flex;align-items:center;gap:6px;
+    background:var(--surface);border:1px solid var(--line);
+    padding:6px 10px;border-radius:999px;font-size:13px;color:var(--ink);
+  }
+  .chip.active{background:var(--accent-soft);border-color:var(--accent);color:var(--ink)}
+  .chip .x{
+    background:transparent;border:0;color:var(--muted);cursor:pointer;
+    font-size:14px;line-height:1;padding:0 2px;
+  }
+  .chip .x:hover{color:var(--danger)}
+  /* grid of item cards */
+  .grid{
+    display:grid;gap:14px;
+    grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+  }
+  .card{
+    background:var(--surface);border:1px solid var(--line);
+    border-radius:var(--radius);overflow:hidden;
+    box-shadow:var(--shadow);
+    display:flex;flex-direction:column;
+  }
+  .card .photo{
+    aspect-ratio:4/3;background:#f3eee5 center/cover no-repeat;
+  }
+  .card .body{padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+  .card h3{margin:0;font-size:15px;line-height:1.25}
+  .card .meta{font-size:12px;color:var(--muted)}
+  .card .row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .card .tag{
+    font-size:12px;padding:2px 8px;border-radius:999px;
+    background:var(--accent-soft);color:#3a2aa3;
+  }
+  .card .actions{
+    display:flex;gap:6px;justify-content:flex-end;
+    border-top:1px solid var(--line);padding:8px 10px;background:#fbfaf7;
+  }
+  .empty{
+    border:1px dashed var(--line);border-radius:var(--radius);
+    padding:30px;text-align:center;color:var(--muted);
+    background:var(--surface);
+  }
+  /* category manager */
+  .cat-list{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+  .cat-row{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:10px 12px;background:var(--surface);border:1px solid var(--line);
+    border-radius:10px;
+  }
+  .cat-row .name{font-weight:600}
+  .cat-row .count{color:var(--muted);font-size:13px}
+  /* outfits */
+  .outfit-card{
+    background:var(--surface);border:1px solid var(--line);
+    border-radius:var(--radius);padding:14px;
+    box-shadow:var(--shadow);
+  }
+  .outfit-card h4{margin:0 0 8px}
+  .outfit-items{
+    display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 12px;
+  }
+  .outfit-item{
+    width:64px;height:64px;border-radius:10px;border:1px solid var(--line);
+    background:#f3eee5 center/cover no-repeat;
+    display:flex;align-items:center;justify-content:center;
+    font-size:11px;color:var(--muted);text-align:center;padding:4px;
+  }
+  /* picker for outfits */
+  .picker{
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));
+    gap:8px;max-height:240px;overflow:auto;padding:8px;
+    background:#fff;border:1px solid var(--line);border-radius:10px;
+  }
+  .picker label{
+    display:flex;flex-direction:column;align-items:center;gap:4px;
+    border:1px solid var(--line);border-radius:10px;padding:6px;
+    cursor:pointer;font-size:12px;
+  }
+  .picker label:hover{border-color:var(--accent)}
+  .picker input{margin-top:4px}
+  .picker .thumb{
+    width:80px;height:60px;border-radius:8px;border:1px solid var(--line);
+    background:#f3eee5 center/cover no-repeat;
+  }
+  /* toast */
+  .toast{
+    position:fixed;left:50%;bottom:24px;transform:translateX(-50%);
+    background:#1f1b16;color:#fff;padding:10px 14px;border-radius:10px;
+    box-shadow:var(--shadow);font-size:14px;opacity:0;pointer-events:none;
+    transition:opacity .2s, transform .2s;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(-4px)}
+  /* responsive */
+  @media (max-width:640px){
+    .form{grid-template-columns:1fr}
+    header h1{font-size:20px}
+  }
+  /* small util */
+  .row-gap-sm{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .hidden{display:none!important}
+  .muted{color:var(--muted)}
+  .danger-soft{background:var(--danger-soft);color:#7a2218;border-color:#f3c8c3}
+</style>
 </head>
 <body>
-  <header>
-    <div class="topline">
-      <h1>My Dressing</h1>
-      <span aria-hidden="true">🧥</span>
+<header>
+  <h1>My Wardrobe</h1>
+  <p>Private, local-only. Photos never leave this device.</p>
+</header>
+<main>
+  <nav class="tabs" role="tablist">
+    <button class="tab active" data-tab="wardrobe" role="tab">Wardrobe</button>
+    <button class="tab" data-tab="outfits" role="tab">Outfits</button>
+    <button class="tab" data-tab="categories" role="tab">Categories</button>
+  </nav>
+
+  <!-- WARDROBE TAB -->
+  <section class="tab-panel active" data-panel="wardrobe">
+    <form id="item-form" class="form" autocomplete="off">
+      <div class="field full">
+        <label for="f-name">Item name</label>
+        <input id="f-name" type="text" required placeholder="e.g. Blue linen shirt" />
+      </div>
+
+      <div class="field">
+        <label for="f-category">Category</label>
+        <select id="f-category" required></select>
+      </div>
+
+      <div class="field">
+        <label for="f-purchase">Purchase date</label>
+        <input id="f-purchase" type="date" />
+      </div>
+
+      <div class="field">
+        <label>Color</label>
+        <div class="color-row">
+          <span class="swatch" id="f-swatch" style="background:#7a5af8"></span>
+          <input id="f-color" type="color" value="#7a5af8" aria-label="Pick color" />
+          <input id="f-colorname" type="text" placeholder="Color name (e.g. Indigo)" />
+        </div>
+      </div>
+
+      <div class="field full">
+        <label>Photo (stored locally in your browser)</label>
+        <label class="photo-zone" for="f-photo">
+          <div>Click to add a photo (optional)</div>
+          <input id="f-photo" type="file" accept="image/*" />
+          <img id="f-preview" class="photo-preview" alt="" />
+        </label>
+      </div>
+
+      <div class="field full">
+        <label for="f-notes">Notes</label>
+        <textarea id="f-notes" rows="2" placeholder="Optional notes…"></textarea>
+      </div>
+
+      <div class="full row-gap-sm" style="justify-content:flex-end">
+        <button type="button" id="cancel-edit" class="btn ghost hidden">Cancel</button>
+        <button type="submit" class="btn" id="save-btn">Add item</button>
+      </div>
+    </form>
+
+    <div class="toolbar">
+      <div class="chips" id="cat-chips"></div>
+      <div class="grow"></div>
+      <input type="search" id="search" placeholder="Search items…" />
     </div>
-    <p class="subtitle">Your wardrobe, right in your pocket</p>
-  </header>
 
-  <main>
-    <nav class="tabs" aria-label="App sections">
-      <button class="tab active" id="closetTab">My closet</button>
-      <button class="tab" id="outfitTab">Outfits</button>
-    </nav>
+    <div id="grid" class="grid"></div>
+    <div id="empty" class="empty hidden">No items yet. Add your first piece above.</div>
+  </section>
 
-    <section id="closetView">
-      <div class="section-head">
-        <h2>Your clothes</h2>
-        <select class="filter" id="filter">
-          <option value="All">All items</option>
-          <option>Tops</option><option>Bottoms</option><option>Dresses</option>
-          <option>Shoes</option><option>Outerwear</option><option>Accessories</option>
-        </select>
+  <!-- OUTFITS TAB -->
+  <section class="tab-panel" data-panel="outfits">
+    <form id="outfit-form" class="form" autocomplete="off">
+      <div class="field full">
+        <label for="o-name">Outfit name</label>
+        <input id="o-name" type="text" required placeholder="e.g. Friday casual" />
       </div>
-      <div id="items" class="grid"></div>
-
-      <form class="add-card" id="addForm">
-        <h2>Add a clothing item</h2>
-        <label for="photo">Photo</label>
-        <input id="photo" type="file" accept="image/*" required>
-        <label for="name">Name (optional)</label>
-        <input id="name" type="text" placeholder="e.g. Blue jeans">
-        <label for="category">Category</label>
-        <select id="category">
-          <option>Tops</option><option>Bottoms</option><option>Dresses</option>
-          <option>Shoes</option><option>Outerwear</option><option>Accessories</option>
-        </select>
-        <button class="primary" type="submit">Add to my closet</button>
-        <p class="hint">Photos are saved in this browser on this device. They are not uploaded to GitHub. Clearing browser data may delete them.</p>
-      </form>
-    </section>
-
-    <section id="outfitView" class="hidden">
-      <div class="section-head">
-        <h2>Outfit ideas</h2>
-        <button class="action" id="makeOutfit">✨ Make an outfit</button>
+      <div class="field full">
+        <label>Pick items</label>
+        <div id="o-picker" class="picker">
+          <div class="muted" style="grid-column:1/-1">Add items to your wardrobe first.</div>
+        </div>
       </div>
-      <div id="outfits"></div>
-      <div class="empty" id="outfitEmpty">
-        <strong>No outfit yet</strong>
-        Add some clothes, then tap “Make an outfit.”
+      <div class="full row-gap-sm" style="justify-content:flex-end">
+        <button type="button" id="cancel-outfit" class="btn ghost hidden">Cancel</button>
+        <button type="submit" class="btn" id="save-outfit-btn">Save outfit</button>
       </div>
-    </section>
+    </form>
 
-    <p class="bottom-note">Stored locally in this browser · Not synced between devices</p>
-  </main>
+    <div id="outfits-list" class="grid" style="margin-top:16px"></div>
+    <div id="outfits-empty" class="empty hidden">No outfits yet. Build your first one above.</div>
+  </section>
+
+  <!-- CATEGORIES TAB -->
+  <section class="tab-panel" data-panel="categories">
+    <form id="cat-form" class="form" autocomplete="off" style="grid-template-columns:1fr auto">
+      <div class="field">
+        <label for="c-name">New category</label>
+        <input id="c-name" type="text" required placeholder="e.g. Outerwear" />
+      </div>
+      <div class="field" style="justify-content:flex-end">
+        <label>&nbsp;</label>
+        <button type="submit" class="btn">Add category</button>
+      </div>
+    </form>
+
+    <div id="cat-list" class="cat-list"></div>
+  </section>
+</main>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
 
 <script>
-  const DB_NAME = "my-dressing-local";
-  const STORE = "clothes";
-  let db;
+/* =========================================================
+   My Wardrobe — single-file app
+   Storage: IndexedDB for photo blobs, localStorage for items,
+   categories, outfits. No network, no uploads.
+   ========================================================= */
 
-  function openDB() {
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open(DB_NAME, 1);
-      request.onupgradeneeded = () => request.result.createObjectStore(STORE, { keyPath: "id" });
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
+const DB_NAME = "wardrobe-db";
+const DB_VERSION = 1;
+const STORE_PHOTOS = "photos";
+
+/* ---------- IndexedDB (photos) ---------- */
+function openDB(){
+  return new Promise((resolve,reject)=>{
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = e => {
+      const db = e.target.result;
+      if(!db.objectStoreNames.contains(STORE_PHOTOS)){
+        db.createObjectStore(STORE_PHOTOS,{keyPath:"id"});
+      }
+    };
+    req.onsuccess = ()=>resolve(req.result);
+    req.onerror   = ()=>reject(req.error);
+  });
+}
+async function dbPutPhoto(id, blob){
+  const db = await openDB();
+  return new Promise((res,rej)=>{
+    const tx = db.transaction(STORE_PHOTOS,"readwrite");
+    tx.objectStore(STORE_PHOTOS).put({id, blob});
+    tx.oncomplete = ()=>res();
+    tx.onerror    = ()=>rej(tx.error);
+  });
+}
+async function dbGetPhoto(id){
+  const db = await openDB();
+  return new Promise((res,rej)=>{
+    const tx = db.transaction(STORE_PHOTOS,"readonly");
+    const r = tx.objectStore(STORE_PHOTOS).get(id);
+    r.onsuccess = ()=>res(r.result ? r.result.blob : null);
+    r.onerror   = ()=>rej(r.error);
+  });
+}
+async function dbDeletePhoto(id){
+  const db = await openDB();
+  return new Promise((res,rej)=>{
+    const tx = db.transaction(STORE_PHOTOS,"readwrite");
+    tx.objectStore(STORE_PHOTOS).delete(id);
+    tx.oncomplete = ()=>res();
+    tx.onerror    = ()=>rej(tx.error);
+  });
+}
+
+/* ---------- localStorage (items, categories, outfits) ---------- */
+const LS_KEYS = {
+  items: "wardrobe.items.v1",
+  cats:  "wardrobe.categories.v1",
+  fits:  "wardrobe.outfits.v1"
+};
+const DEFAULT_CATEGORIES = ["Tops","Bottoms","Dresses","Shoes","Outerwear","Accessories"];
+function lsGet(k, fallback){
+  try{
+    const v = localStorage.getItem(k);
+    if(v == null) return fallback;
+    const parsed = JSON.parse(v);
+    return parsed ?? fallback;
+  }catch{ return fallback; }
+}
+function lsSet(k, v){ localStorage.setItem(k, JSON.stringify(v)); }
+
+/* Legacy migration: ensure categories list contains defaults, items may
+   carry unknown categories — keep them but show a "Legacy" indicator. */
+function migrate(){
+  let cats = lsGet(LS_KEYS.cats, null);
+  if(!Array.isArray(cats)){
+    cats = DEFAULT_CATEGORIES.slice();
+    lsSet(LS_KEYS.cats, cats);
+  } else {
+    // Ensure each default exists at least once; users can still delete.
+    const missing = DEFAULT_CATEGORIES.filter(d => !cats.includes(d));
+    if(missing.length){ cats = cats.concat(missing); lsSet(LS_KEYS.cats, cats); }
   }
-  function allItems() {
-    return new Promise((resolve, reject) => {
-      const request = db.transaction(STORE).objectStore(STORE).getAll();
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
+  let items = lsGet(LS_KEYS.items, null);
+  if(!Array.isArray(items)){ items = []; lsSet(LS_KEYS.items, items); }
+  let fits  = lsGet(LS_KEYS.fits, null);
+  if(!Array.isArray(fits)){ fits = []; lsSet(LS_KEYS.fits, fits); }
+}
+
+/* ---------- helpers ---------- */
+const $ = sel => document.querySelector(sel);
+const $$ = sel => Array.from(document.querySelectorAll(sel));
+const uid = ()=> "id_" + Math.random().toString(36).slice(2,10) + Date.now().toString(36).slice(-4);
+
+function toast(msg){
+  const t = $("#toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toast._h);
+  toast._h = setTimeout(()=>t.classList.remove("show"), 1800);
+}
+
+function fmtDate(iso){
+  if(!iso) return "";
+  try{
+    const d = new Date(iso + "T00:00:00");
+    if(isNaN(d)) return iso;
+    return d.toLocaleDateString(undefined,{year:"numeric",month:"short",day:"numeric"});
+  }catch{ return iso; }
+}
+
+/* ---------- state ---------- */
+const state = {
+  items: [],      // {id,name,category,color,colorName,purchaseDate,notes,photoId,createdAt}
+  categories: [],
+  outfits: [],    // {id,name,itemIds:[],createdAt}
+  filterCategory: "All",
+  search: "",
+  editingItemId: null,
+  editingOutfitId: null,
+  pendingPhotoBlob: null,
+  pendingPhotoType: null
+};
+
+/* ---------- rendering ---------- */
+function renderCategorySelect(){
+  const sel = $("#f-category");
+  sel.innerHTML = state.categories
+    .map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
+}
+function renderCategoryChips(){
+  const wrap = $("#cat-chips");
+  const all = ["All", ...state.categories];
+  wrap.innerHTML = all.map(c => {
+    const active = state.filterCategory === c ? "active" : "";
+    const removable = state.categories.includes(c);
+    return `<span class="chip ${active}" data-cat="${escapeHtml(c)}">
+      ${escapeHtml(c)}
+      ${removable ? `<button class="x" title="Remove category" data-delcat="${escapeHtml(c)}">×</button>`:""}
+    </span>`;
+  }).join("");
+}
+function renderCategoryList(){
+  const list = $("#cat-list");
+  if(state.categories.length === 0){
+    list.innerHTML = `<div class="empty">No categories yet.</div>`;
+    return;
   }
-  function saveItem(item) {
-    return new Promise((resolve, reject) => {
-      const request = db.transaction(STORE, "readwrite").objectStore(STORE).put(item);
-      request.onsuccess = resolve;
-      request.onerror = () => reject(request.error);
-    });
+  list.innerHTML = state.categories.map(c => {
+    const count = state.items.filter(i => (i.category||"") === c).length;
+    const isDefault = DEFAULT_CATEGORIES.includes(c);
+    return `<div class="cat-row">
+      <div>
+        <div class="name">${escapeHtml(c)} ${isDefault?'<span class="muted" style="font-weight:400;font-size:12px">(built-in)</span>':""}</div>
+        <div class="count">${count} item${count===1?"":"s"}</div>
+      </div>
+      <button class="btn small danger" data-delcat="${escapeHtml(c)}">Delete</button>
+    </div>`;
+  }).join("");
+}
+function renderItems(){
+  const grid = $("#grid");
+  const empty = $("#empty");
+  const term = state.search.trim().toLowerCase();
+  const list = state.items.filter(i => {
+    const catOk = state.filterCategory === "All" || (i.category||"") === state.filterCategory;
+    if(!catOk) return false;
+    if(!term) return true;
+    return (i.name||"").toLowerCase().includes(term)
+      || (i.category||"").toLowerCase().includes(term)
+      || (i.colorName||"").toLowerCase().includes(term)
+      || (i.notes||"").toLowerCase().includes(term);
+  }).sort((a,b)=> (b.createdAt||0) - (a.createdAt||0));
+
+  if(list.length === 0){
+    grid.innerHTML = "";
+    empty.classList.remove("hidden");
+    return;
   }
-  function removeItem(id) {
-    return new Promise((resolve, reject) => {
-      const request = db.transaction(STORE, "readwrite").objectStore(STORE).delete(id);
-      request.onsuccess = resolve;
-      request.onerror = () => reject(request.error);
+  empty.classList.add("hidden");
+  grid.innerHTML = list.map(itemCardHtml).join("");
+
+  // Lazy-load photos
+  list.forEach(item => {
+    if(!item.photoId) return;
+    const el = grid.querySelector(`[data-photo-for="${item.id}"]`);
+    if(!el) return;
+    dbGetPhoto(item.photoId).then(blob => {
+      if(!blob) return;
+      const url = URL.createObjectURL(blob);
+      el.style.backgroundImage = `url("${url}")`;
+    }).catch(()=>{});
+  });
+}
+function itemCardHtml(i){
+  const swatchBg = i.color || "#cccccc";
+  const colorText = i.colorName ? escapeHtml(i.colorName) : "";
+  const colorHex  = i.color ? `<span class="muted">${escapeHtml(i.color)}</span>` : "";
+  const dateTxt   = i.purchaseDate ? `Purchased ${fmtDate(i.purchaseDate)}` : "";
+  return `
+  <article class="card" data-id="${i.id}">
+    <div class="photo" data-photo-for="${i.id}"></div>
+    <div class="body">
+      <h3>${escapeHtml(i.name||"Untitled")}</h3>
+      <div class="row">
+        <span class="tag">${escapeHtml(i.category||"Uncategorized")}</span>
+        <span class="swatch" style="background:${escapeHtml(swatchBg)}" title="${escapeHtml(swatchBg)}"></span>
+        ${colorText ? `<span class="meta">${colorText}</span>` : ""}
+        ${colorHex}
+      </div>
+      <div class="meta">${dateTxt}</div>
+      ${i.notes ? `<div class="meta" style="white-space:pre-wrap">${escapeHtml(i.notes)}</div>` : ""}
+    </div>
+    <div class="actions">
+      <button class="btn small ghost" data-act="edit" data-id="${i.id}">Edit</button>
+      <button class="btn small danger" data-act="del" data-id="${i.id}">Delete</button>
+    </div>
+  </article>`;
+}
+function renderOutfits(){
+  const grid = $("#outfits-list");
+  const empty = $("#outfits-empty");
+  if(state.outfits.length === 0){
+    grid.innerHTML = "";
+    empty.classList.remove("hidden");
+    return;
+  }
+  empty.classList.add("hidden");
+  grid.innerHTML = state.outfits.map(o => {
+    const items = o.itemIds.map(id => state.items.find(x => x.id === id)).filter(Boolean);
+    return `
+    <article class="outfit-card" data-id="${o.id}">
+      <div class="row-gap-sm" style="justify-content:space-between;align-items:center">
+        <h4>${escapeHtml(o.name)}</h4>
+        <div class="row-gap-sm">
+          <button class="btn small ghost" data-oact="edit" data-id="${o.id}">Edit</button>
+          <button class="btn small danger" data-oact="del" data-id="${o.id}">Delete</button>
+        </div>
+      </div>
+      <div class="outfit-items">
+        ${items.length === 0
+          ? `<span class="muted">Items were removed from wardrobe.</span>`
+          : items.map(it => `
+            <div class="outfit-item" data-photo-for="${it.id}">${escapeHtml(it.name)}</div>
+          `).join("")}
+      </div>
+    </article>`;
+  }).join("");
+
+  // load thumbs
+  state.outfits.forEach(o => {
+    o.itemIds.forEach(id => {
+      const it = state.items.find(x=>x.id===id);
+      if(!it || !it.photoId) return;
+      const el = grid.querySelector(`[data-photo-for="${id}"]`);
+      if(!el) return;
+      dbGetPhoto(it.photoId).then(blob => {
+        if(!blob) return;
+        el.style.backgroundImage = `url("${URL.createObjectURL(blob)}")`;
+      }).catch(()=>{});
     });
+  });
+}
+function renderOutfitPicker(){
+  const wrap = $("#o-picker");
+  if(state.items.length === 0){
+    wrap.innerHTML = `<div class="muted">Add items to your wardrobe first.</div>`;
+    return;
+  }
+  wrap.innerHTML = state.items.map(i => `
+    <label>
+      <div class="thumb" data-photo-for="${i.id}"></div>
+      <div>${escapeHtml(i.name)}</div>
+      <input type="checkbox" value="${i.id}" />
+    </label>
+  `).join("");
+  state.items.forEach(i => {
+    if(!i.photoId) return;
+    const el = wrap.querySelector(`[data-photo-for="${i.id}"]`);
+    if(!el) return;
+    dbGetPhoto(i.photoId).then(blob => {
+      if(!blob) return;
+      el.style.backgroundImage = `url("${URL.createObjectURL(blob)}")`;
+    }).catch(()=>{});
+  });
+}
+function renderAll(){
+  renderCategorySelect();
+  renderCategoryChips();
+  renderCategoryList();
+  renderItems();
+  renderOutfits();
+  renderOutfitPicker();
+}
+
+/* ---------- escape ---------- */
+function escapeHtml(s){
+  return String(s == null ? "" : s)
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+}
+
+/* ---------- CRUD: items ---------- */
+function readFormItem(){
+  return {
+    id: state.editingItemId || uid(),
+    name: $("#f-name").value.trim(),
+    category: $("#f-category").value,
+    purchaseDate: $("#f-purchase").value || null,
+    color: $("#f-color").value || null,
+    colorName: $("#f-colorname").value.trim() || null,
+    notes: $("#f-notes").value.trim() || null,
+    photoId: null, // set in save if applicable
+    createdAt: state.editingItemId
+      ? (state.items.find(x=>x.id===state.editingItemId)?.createdAt || Date.now())
+      : Date.now()
+  };
+}
+async function saveItem(e){
+  e.preventDefault();
+  const item = readFormItem();
+  if(!item.name){ toast("Please enter a name"); return; }
+  if(!item.category){ toast("Please pick a category"); return; }
+
+  // ensure custom category exists
+  if(!state.categories.includes(item.category)){
+    state.categories.push(item.category);
+    state.categories.sort((a,b)=>a.localeCompare(b));
+    lsSet(LS_KEYS.cats, state.categories);
   }
 
-  async function render() {
-    const list = await allItems();
-    const selected = document.getElementById("filter").value;
-    const shown = selected === "All" ? list : list.filter(x => x.category === selected);
-    const container = document.getElementById("items");
-    container.innerHTML = "";
-
-    if (!shown.length) {
-      container.innerHTML = `<div class="empty" style="grid-column:1/-1">
-        <strong>${list.length ? "No items in this category" : "Your closet is empty"}</strong>
-        Add a photo below to get started.
-      </div>`;
-      return;
-    }
-
-    shown.forEach(item => {
-      const url = URL.createObjectURL(item.photo);
-      const card = document.createElement("article");
-      card.className = "item";
-      card.innerHTML = `<button class="delete" aria-label="Delete item">×</button>
-        <img alt="">
-        <div class="item-info"><div class="item-name"></div>
-        <div class="item-type"></div></div>`;
-      card.querySelector("img").src = url;
-      card.querySelector(".item-name").textContent = item.name || item.category;
-      card.querySelector(".item-type").textContent = item.category;
-      card.querySelector(".delete").onclick = async () => {
-        await removeItem(item.id);
-        render();
-      };
-      container.appendChild(card);
-    });
+  // photo
+  const existing = state.editingItemId
+    ? state.items.find(x=>x.id===state.editingItemId) : null;
+  if(state.pendingPhotoBlob){
+    const photoId = (existing && existing.photoId) || uid();
+    await dbPutPhoto(photoId, state.pendingPhotoBlob);
+    item.photoId = photoId;
+  } else if(existing){
+    item.photoId = existing.photoId || null;
   }
 
-  document.getElementById("addForm").addEventListener("submit", async event => {
-    event.preventDefault();
-    const file = document.getElementById("photo").files[0];
-    if (!file) return;
-    await saveItem({
-      id: crypto.randomUUID(),
-      name: document.getElementById("name").value.trim(),
-      category: document.getElementById("category").value,
-      photo: file
-    });
-    event.target.reset();
-    render();
+  if(state.editingItemId){
+    const idx = state.items.findIndex(x=>x.id===state.editingItemId);
+    if(idx>=0) state.items[idx] = {...existing, ...item};
+    toast("Item updated");
+  } else {
+    state.items.push(item);
+    toast("Item added");
+  }
+  lsSet(LS_KEYS.items, state.items);
+
+  resetItemForm();
+  renderAll();
+}
+function resetItemForm(){
+  $("#item-form").reset();
+  $("#f-swatch").style.background = "#7a5af8";
+  $("#f-color").value = "#7a5af8";
+  $("#f-preview").style.display = "none";
+  $("#f-preview").src = "";
+  state.editingItemId = null;
+  state.pendingPhotoBlob = null;
+  $("#save-btn").textContent = "Add item";
+  $("#cancel-edit").classList.add("hidden");
+}
+async function deleteItem(id){
+  const it = state.items.find(x=>x.id===id);
+  if(!it) return;
+  if(!confirm(`Delete "${it.name}"? This also removes it from any outfits.`)) return;
+  state.items = state.items.filter(x=>x.id!==id);
+  if(it.photoId){ try{ await dbDeletePhoto(it.photoId); }catch{} }
+  // remove from outfits
+  state.outfits.forEach(o => { o.itemIds = o.itemIds.filter(x=>x!==id); });
+  lsSet(LS_KEYS.items, state.items);
+  lsSet(LS_KEYS.fits, state.outfits);
+  if(state.editingItemId === id) resetItemForm();
+  toast("Item deleted");
+  renderAll();
+}
+function startEditItem(id){
+  const it = state.items.find(x=>x.id===id);
+  if(!it) return;
+  state.editingItemId = id;
+  $("#f-name").value = it.name || "";
+  // ensure category exists in the select even if legacy
+  if(!state.categories.includes(it.category)){
+    state.categories.push(it.category);
+    state.categories.sort((a,b)=>a.localeCompare(b));
+    lsSet(LS_KEYS.cats, state.categories);
+    renderCategorySelect();
+  }
+  $("#f-category").value = it.category || state.categories[0];
+  $("#f-purchase").value = it.purchaseDate || "";
+  $("#f-color").value = it.color || "#7a5af8";
+  $("#f-colorname").value = it.colorName || "";
+  $("#f-swatch").style.background = it.color || "#cccccc";
+  $("#f-notes").value = it.notes || "";
+  // photo preview
+  if(it.photoId){
+    dbGetPhoto(it.photoId).then(blob => {
+      if(!blob) return;
+      const url = URL.createObjectURL(blob);
+      const img = $("#f-preview");
+      img.src = url;
+      img.style.display = "block";
+    }).catch(()=>{});
+  } else {
+    $("#f-preview").style.display = "none";
+    $("#f-preview").src = "";
+  }
+  state.pendingPhotoBlob = null;
+  $("#save-btn").textContent = "Save changes";
+  $("#cancel-edit").classList.remove("hidden");
+  // Switch to wardrobe tab
+  switchTab("wardrobe");
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+
+/* ---------- CRUD: categories ---------- */
+function addCategory(name){
+  name = (name||"").trim();
+  if(!name) return;
+  if(state.categories.includes(name)){ toast("Already exists"); return; }
+  state.categories.push(name);
+  state.categories.sort((a,b)=>a.localeCompare(b));
+  lsSet(LS_KEYS.cats, state.categories);
+  toast(`Category "${name}" added`);
+  renderAll();
+}
+function deleteCategory(name){
+  const used = state.items.filter(i => (i.category||"") === name).length;
+  const msg = used > 0
+    ? `Delete category "${name}"? ${used} item(s) will be set to "Uncategorized".`
+    : `Delete category "${name}"?`;
+  if(!confirm(msg)) return;
+  state.items.forEach(i => { if((i.category||"") === name) i.category = "Uncategorized"; });
+  state.categories = state.categories.filter(c => c !== name);
+  // Re-add "Uncategorized" if missing so items have a valid bucket
+  if(!state.categories.includes("Uncategorized")) state.categories.unshift("Uncategorized");
+  if(state.filterCategory === name) state.filterCategory = "All";
+  lsSet(LS_KEYS.cats, state.categories);
+  lsSet(LS_KEYS.items, state.items);
+  toast(`Category "${name}" removed`);
+  renderAll();
+}
+
+/* ---------- CRUD: outfits ---------- */
+function readOutfitForm(){
+  const checked = $$("#o-picker input[type=checkbox]:checked").map(x=>x.value);
+  return {
+    id: state.editingOutfitId || uid(),
+    name: $("#o-name").value.trim(),
+    itemIds: checked,
+    createdAt: state.editingOutfitId
+      ? (state.outfits.find(x=>x.id===state.editingOutfitId)?.createdAt || Date.now())
+      : Date.now()
+  };
+}
+function saveOutfit(e){
+  e.preventDefault();
+  const o = readOutfitForm();
+  if(!o.name){ toast("Please enter an outfit name"); return; }
+  if(o.itemIds.length === 0){ toast("Pick at least one item"); return; }
+  if(state.editingOutfitId){
+    const idx = state.outfits.findIndex(x=>x.id===state.editingOutfitId);
+    if(idx>=0) state.outfits[idx] = {...state.outfits[idx], ...o};
+    toast("Outfit updated");
+  } else {
+    state.outfits.push(o);
+    toast("Outfit saved");
+  }
+  lsSet(LS_KEYS.fits, state.outfits);
+  resetOutfitForm();
+  renderAll();
+}
+function resetOutfitForm(){
+  $("#outfit-form").reset();
+  state.editingOutfitId = null;
+  $("#save-outfit-btn").textContent = "Save outfit";
+  $("#cancel-outfit").classList.add("hidden");
+}
+function deleteOutfit(id){
+  const o = state.outfits.find(x=>x.id===id);
+  if(!o) return;
+  if(!confirm(`Delete outfit "${o.name}"?`)) return;
+  state.outfits = state.outfits.filter(x=>x.id!==id);
+  lsSet(LS_KEYS.fits, state.outfits);
+  if(state.editingOutfitId === id) resetOutfitForm();
+  toast("Outfit deleted");
+  renderAll();
+}
+function startEditOutfit(id){
+  const o = state.outfits.find(x=>x.id===id);
+  if(!o) return;
+  state.editingOutfitId = id;
+  $("#o-name").value = o.name || "";
+  $$("#o-picker input[type=checkbox]").forEach(cb => {
+    cb.checked = o.itemIds.includes(cb.value);
+  });
+  $("#save-outfit-btn").textContent = "Save changes";
+  $("#cancel-outfit").classList.remove("hidden");
+  switchTab("outfits");
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+
+/* ---------- tabs ---------- */
+function switchTab(name){
+  $$(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === name));
+  $$(".tab-panel").forEach(p => p.classList.toggle("active", p.dataset.panel === name));
+}
+
+/* ---------- bindings ---------- */
+function bind(){
+  // tabs
+  $$(".tab").forEach(t => t.addEventListener("click", ()=> switchTab(t.dataset.tab)));
+
+  // item form
+  $("#item-form").addEventListener("submit", saveItem);
+  $("#cancel-edit").addEventListener("click", resetItemForm);
+
+  // color input -> swatch preview
+  $("#f-color").addEventListener("input", e => {
+    $("#f-swatch").style.background = e.target.value;
+  });
+  // photo
+  $("#f-photo").addEventListener("change", e => {
+    const f = e.target.files && e.target.files[0];
+    if(!f){ state.pendingPhotoBlob = null; $("#f-preview").style.display="none"; return; }
+    if(f.size > 8 * 1024 * 1024){ toast("Photo too large (max 8MB)"); e.target.value=""; return; }
+    state.pendingPhotoBlob = f;
+    const url = URL.createObjectURL(f);
+    const img = $("#f-preview");
+    img.src = url;
+    img.style.display = "block";
   });
 
-  document.getElementById("filter").addEventListener("change", render);
+  // grid actions
+  $("#grid").addEventListener("click", e => {
+    const btn = e.target.closest("button[data-act]");
+    if(!btn) return;
+    const id = btn.dataset.id;
+    if(btn.dataset.act === "edit") startEditItem(id);
+    else if(btn.dataset.act === "del") deleteItem(id);
+  });
 
-  document.getElementById("closetTab").onclick = () => {
-    closetTab.classList.add("active"); outfitTab.classList.remove("active");
-    closetView.classList.remove("hidden"); outfitView.classList.add("hidden");
-  };
-  document.getElementById("outfitTab").onclick = () => {
-    outfitTab.classList.add("active"); closetTab.classList.remove("active");
-    outfitView.classList.remove("hidden"); closetView.classList.add("hidden");
-  };
+  // search
+  $("#search").addEventListener("input", e => {
+    state.search = e.target.value;
+    renderItems();
+  });
 
-  document.getElementById("makeOutfit").onclick = async () => {
-    const list = await allItems();
-    const picks = ["Tops", "Bottoms", "Shoes"].map(category => {
-      const options = list.filter(item => item.category === category);
-      return options.length ? options[Math.floor(Math.random() * options.length)] : null;
-    }).filter(Boolean);
-
-    if (!picks.length) {
-      alert("Add some clothes to your closet first.");
+  // chips: filter + delete
+  $("#cat-chips").addEventListener("click", e => {
+    const x = e.target.closest("[data-delcat]");
+    if(x){
+      e.stopPropagation();
+      deleteCategory(x.dataset.delcat);
       return;
     }
-    document.getElementById("outfitEmpty").classList.add("hidden");
-    const outfit = document.createElement("div");
-    outfit.className = "outfit-card";
-    outfit.innerHTML = "<h3>Today's outfit idea</h3><div class='outfit-pieces'></div>";
-    for (const item of picks) {
-      const img = document.createElement("img");
-      img.src = URL.createObjectURL(item.photo);
-      img.alt = item.name || item.category;
-      outfit.querySelector(".outfit-pieces").appendChild(img);
+    const chip = e.target.closest(".chip");
+    if(chip){
+      state.filterCategory = chip.dataset.cat;
+      renderCategoryChips();
+      renderItems();
     }
-    document.getElementById("outfits").prepend(outfit);
-  };
+  });
 
-  (async () => {
-    db = await openDB();
-    render();
-  })().catch(() => alert("Your browser could not open local storage. Please try Chrome on your phone."));
+  // categories tab
+  $("#cat-form").addEventListener("submit", e => {
+    e.preventDefault();
+    addCategory($("#c-name").value);
+    $("#c-name").value = "";
+  });
+  $("#cat-list").addEventListener("click", e => {
+    const btn = e.target.closest("[data-delcat]");
+    if(!btn) return;
+    deleteCategory(btn.dataset.delcat);
+  });
+
+  // outfits form
+  $("#outfit-form").addEventListener("submit", saveOutfit);
+  $("#cancel-outfit").addEventListener("click", resetOutfitForm);
+  $("#outfits-list").addEventListener("click", e => {
+    const btn = e.target.closest("button[data-oact]");
+    if(!btn) return;
+    const id = btn.dataset.id;
+    if(btn.dataset.oact === "edit") startEditOutfit(id);
+    else if(btn.dataset.oact === "del") deleteOutfit(id);
+  });
+}
+
+/* ---------- bootstrap ---------- */
+function load(){
+  migrate();
+  state.categories = lsGet(LS_KEYS.cats, DEFAULT_CATEGORIES.slice());
+  state.items      = lsGet(LS_KEYS.items, []);
+  state.outfits    = lsGet(LS_KEYS.fits, []);
+  // Legacy category backfill: items with unknown categories are kept,
+  // but their category may not exist in state.categories. We expose them
+  // via category chips by ensuring any item.category value is included.
+  state.items.forEach(i => {
+    if(i.category && !state.categories.includes(i.category)){
+      state.categories.push(i.category);
+    }
+  });
+  state.categories = Array.from(new Set(state.categories)).sort((a,b)=>a.localeCompare(b));
+  if(!state.categories.includes("Uncategorized")) state.categories.unshift("Uncategorized");
+  lsSet(LS_KEYS.cats, state.categories);
+
+  bind();
+  renderAll();
+}
+load();
 </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"8607d2a720d14b038279025b2b5a82e5","spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
