@@ -210,6 +210,22 @@
     transition:opacity .2s, transform .2s;
   }
   .toast.show{opacity:1;transform:translateX(-50%) translateY(-4px)}
+
+  /* focused category library */
+  .inline-link{border:0;background:none;color:var(--accent);font:inherit;font-size:12px;text-transform:none;letter-spacing:0;cursor:pointer;margin-left:5px}
+  .category-intro{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:18px;background:#fff;border:1px solid var(--line);border-radius:var(--radius)}
+  .category-intro h2,.dialog-head h2{margin:0;font-size:21px;letter-spacing:-.03em}
+  .category-intro p{margin:4px 0 0;color:var(--muted);font-size:13px}
+  .category-dialog{width:min(620px,calc(100vw - 28px));max-height:min(88vh,780px);padding:24px;border:1px solid var(--line);border-radius:20px;background:#faf8f4;color:var(--ink);box-shadow:0 24px 80px rgba(31,27,22,.24)}
+  .category-dialog::backdrop{background:rgba(28,24,19,.48);backdrop-filter:blur(3px)}
+  .dialog-head{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;margin-bottom:20px}.dialog-head .muted{font-size:13px;margin:5px 0 0}.eyebrow{margin:0 0 6px;color:var(--accent);font-size:10px;font-weight:800;letter-spacing:.16em}
+  .icon-close{border:1px solid var(--line);background:white;border-radius:50%;width:34px;height:34px;font-size:22px;line-height:1;color:var(--muted)}
+  .category-form{display:grid;grid-template-columns:minmax(0,1fr) 120px auto auto;gap:10px;align-items:end;padding:14px;background:#fff;border:1px solid var(--line);border-radius:14px}
+  .category-form .field label{white-space:nowrap}.category-form .color-row{gap:8px}.category-form input[type=color]{width:40px;height:38px}.color-preview{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .storage-card{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:12px 14px;margin-top:12px;background:#f1ede5;border-radius:12px}.storage-card strong{font-size:13px}.storage-card p{font-size:12px;margin:3px 0 0}.portable-tools{display:flex;gap:8px;margin:12px 0 0}.import-label{display:inline-flex;align-items:center}.portable-tools input{display:none}
+  .category-dialog .cat-list{max-height:40vh;overflow:auto;padding-right:2px}.category-dialog .cat-row{background:white}.cat-identity{display:flex;align-items:center;gap:10px}.category-dot{width:17px;height:17px;border-radius:6px;border:1px solid rgba(0,0,0,.12);flex:none}.cat-actions{display:flex;gap:6px}
+  .category-tag{display:inline-flex;align-items:center;gap:6px}.category-tag::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--tag-color,#7a5af8)}
+  @media(max-width:640px){.category-form{grid-template-columns:1fr 1fr}.category-form .field:first-child{grid-column:1/-1}.category-form .btn{width:100%}.category-dialog{padding:18px}.category-intro{align-items:flex-start;flex-direction:column}}
   /* responsive */
   @media (max-width:640px){
     .form{grid-template-columns:1fr}
@@ -243,8 +259,8 @@
       </div>
 
       <div class="field">
-        <label for="f-category">Category</label>
-        <select id="f-category" required></select>
+        <label for="f-category">Category <button type="button" id="open-category-manager" class="inline-link">Manage</button></label>
+        <div class="row-gap-sm"><select id="f-category" required></select><span id="f-category-swatch" class="category-dot" aria-hidden="true"></span></div>
       </div>
 
       <div class="field">
@@ -323,33 +339,39 @@
 
   <!-- CATEGORIES TAB -->
   <section class="tab-panel" data-panel="categories">
-    <form id="cat-form" class="form" autocomplete="off" style="grid-template-columns:1fr auto">
-      <div class="field">
-        <label for="c-name">New category</label>
-        <input id="c-name" type="text" required placeholder="e.g. Outerwear" />
-      </div>
-      <div class="field" style="justify-content:flex-end">
-        <label>&nbsp;</label>
-        <button type="submit" class="btn">Add category</button>
-      </div>
-    </form>
-
+    <div class="category-intro">
+      <div><h2>Category library</h2><p>Organize your wardrobe with named color labels.</p></div>
+      <button type="button" class="btn" id="open-category-manager-tab">Manage categories</button>
+    </div>
     <div id="cat-list" class="cat-list"></div>
   </section>
 </main>
 
+<dialog id="category-dialog" class="category-dialog" aria-labelledby="category-dialog-title">
+  <div class="dialog-head"><div><p class="eyebrow">WARDROBE SYSTEM</p><h2 id="category-dialog-title">Category library</h2><p class="muted">Names and colors appear in your item form and wardrobe filters.</p></div><button type="button" class="icon-close" id="close-category-manager" aria-label="Close">×</button></div>
+  <form id="cat-form" class="category-form" autocomplete="off">
+    <div class="field"><label for="c-name">Category name</label><input id="c-name" type="text" required maxlength="48" placeholder="e.g. Knitwear" /></div>
+    <div class="field"><label for="c-color">Label color</label><div class="color-row"><input id="c-color" type="color" value="#7a5af8" aria-label="Choose category color" /><span id="c-color-preview" class="color-preview">#7A5AF8</span></div></div>
+    <button type="submit" class="btn" id="cat-save-btn">Add category</button>
+    <button type="button" class="btn ghost hidden" id="cat-cancel-edit">Cancel edit</button>
+  </form>
+  <div class="storage-card"><div><strong>Category file</strong><p id="category-storage-status" class="muted">Using browser storage. Choose a folder to keep categories.json there.</p></div><button type="button" id="category-folder-btn" class="btn ghost small">Choose folder</button></div>
+  <div class="portable-tools"><button type="button" id="category-export" class="btn ghost small">Export JSON</button><label class="btn ghost small import-label" for="category-import">Import JSON</label><input type="file" id="category-import" accept="application/json,.json" /></div>
+  <div id="cat-list-dialog" class="cat-list"></div>
+</dialog>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
 <script>
 /* =========================================================
    My Wardrobe — single-file app
-   Storage: IndexedDB for photo blobs, localStorage for items,
-   categories, outfits. No network, no uploads.
+   Storage: IndexedDB for photo blobs and saved folder handles;
+   localStorage for wardrobe data and category fallback. No uploads.
    ========================================================= */
 
 const DB_NAME = "wardrobe-db";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_PHOTOS = "photos";
+const STORE_HANDLES = "handles";
 
 /* ---------- IndexedDB (photos) ---------- */
 function openDB(){
@@ -359,6 +381,9 @@ function openDB(){
       const db = e.target.result;
       if(!db.objectStoreNames.contains(STORE_PHOTOS)){
         db.createObjectStore(STORE_PHOTOS,{keyPath:"id"});
+      }
+      if(!db.objectStoreNames.contains(STORE_HANDLES)){
+        db.createObjectStore(STORE_HANDLES);
       }
     };
     req.onsuccess = ()=>resolve(req.result);
@@ -392,6 +417,21 @@ async function dbDeletePhoto(id){
     tx.onerror    = ()=>rej(tx.error);
   });
 }
+async function dbSaveFolderHandle(handle){
+  const db = await openDB();
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(STORE_HANDLES,"readwrite");
+    tx.objectStore(STORE_HANDLES).put(handle,"category-folder");
+    tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error);
+  });
+}
+async function dbGetFolderHandle(){
+  const db=await openDB();
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(STORE_HANDLES,"readonly"), req=tx.objectStore(STORE_HANDLES).get("category-folder");
+    req.onsuccess=()=>res(req.result||null); req.onerror=()=>rej(req.error);
+  });
+}
 
 /* ---------- localStorage (items, categories, outfits) ---------- */
 const LS_KEYS = {
@@ -409,6 +449,24 @@ function lsGet(k, fallback){
   }catch{ return fallback; }
 }
 function lsSet(k, v){ localStorage.setItem(k, JSON.stringify(v)); }
+const normalizeCategory = (value, index=0) => {
+  if(typeof value === "string") return {name:value.trim(), color: DEFAULT_CATEGORY_COLORS[index % DEFAULT_CATEGORY_COLORS.length]};
+  if(!value || typeof value.name !== "string") return null;
+  const color = /^#[0-9a-f]{6}$/i.test(value.color || "") ? value.color : DEFAULT_CATEGORY_COLORS[index % DEFAULT_CATEGORY_COLORS.length];
+  return {name:value.name.trim(), color};
+};
+const DEFAULT_CATEGORY_COLORS=["#a8c7bb","#e2a87f","#c4a9d8","#e0be63","#83a9cf","#df8b91","#7a5af8"];
+function setCategories(categories){
+  state.categories=categories.map((c,i)=>normalizeCategory(c,i)).filter(c=>c&&c.name);
+  state.categories.sort((a,b)=>a.name.localeCompare(b.name));
+  if(!state.categories.some(c=>c.name==="Uncategorized")) state.categories.unshift({name:"Uncategorized",color:"#b9b2a7"});
+  lsSet(LS_KEYS.cats,state.categories);
+  renderAll();
+  persistCategoryFile().catch(error=>{console.warn("Could not update categories.json",error);});
+}
+function getCategory(name){ return state.categories.find(c=>c.name===name) || {name,color:"#b9b2a7"}; }
+function categoryNames(){ return state.categories.map(c=>c.name); }
+
 
 /* Legacy migration: ensure categories list contains defaults, items may
    carry unknown categories — keep them but show a "Legacy" indicator. */
@@ -418,9 +476,9 @@ function migrate(){
     cats = DEFAULT_CATEGORIES.slice();
     lsSet(LS_KEYS.cats, cats);
   } else {
-    // Ensure each default exists at least once; users can still delete.
-    const missing = DEFAULT_CATEGORIES.filter(d => !cats.includes(d));
-    if(missing.length){ cats = cats.concat(missing); lsSet(LS_KEYS.cats, cats); }
+    // Existing lists (including deliberate deletions) are preserved.
+    cats = cats.map(normalizeCategory).filter(Boolean);
+    lsSet(LS_KEYS.cats, cats);
   }
   let items = lsGet(LS_KEYS.items, null);
   if(!Array.isArray(items)){ items = []; lsSet(LS_KEYS.items, items); }
@@ -513,38 +571,35 @@ const state = {
 /* ---------- rendering ---------- */
 function renderCategorySelect(){
   const sel = $("#f-category");
+  const current = sel.value;
   sel.innerHTML = state.categories
-    .map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
+    .map(c => `<option value="${escapeHtml(c.name)}">${escapeHtml(c.name)}</option>`).join("");
+  if(state.categories.some(c=>c.name===current)) sel.value=current;
+  const marker=$("#f-category-swatch"); if(marker)marker.style.background=getCategory(sel.value).color;
 }
 function renderCategoryChips(){
   const wrap = $("#cat-chips");
-  const all = ["All", ...state.categories];
+  const all = ["All", ...categoryNames()];
   wrap.innerHTML = all.map(c => {
     const active = state.filterCategory === c ? "active" : "";
-    const removable = state.categories.includes(c);
-    return `<span class="chip ${active}" data-cat="${escapeHtml(c)}">
-      ${escapeHtml(c)}
-      ${removable ? `<button class="x" title="Remove category" data-delcat="${escapeHtml(c)}">×</button>`:""}
+    const removable = categoryNames().includes(c);
+    const categoryColor = getCategory(c).color;
+    return `<span class="chip ${active}" data-cat="${escapeHtml(c)}" style="--tag-color:${escapeHtml(categoryColor)}">
+      ${removable ? `<span class="category-dot" style="background:${escapeHtml(categoryColor)}"></span>`:""}${escapeHtml(c)}
     </span>`;
   }).join("");
 }
 function renderCategoryList(){
-  const list = $("#cat-list");
-  if(state.categories.length === 0){
-    list.innerHTML = `<div class="empty">No categories yet.</div>`;
-    return;
-  }
-  list.innerHTML = state.categories.map(c => {
-    const count = state.items.filter(i => (i.category||"") === c).length;
-    const isDefault = DEFAULT_CATEGORIES.includes(c);
-    return `<div class="cat-row">
-      <div>
-        <div class="name">${escapeHtml(c)} ${isDefault?'<span class="muted" style="font-weight:400;font-size:12px">(built-in)</span>':""}</div>
-        <div class="count">${count} item${count===1?"":"s"}</div>
-      </div>
-      <button class="btn small danger" data-delcat="${escapeHtml(c)}">Delete</button>
-    </div>`;
-  }).join("");
+  const renderInto = list => {
+    if(!list) return;
+    if(state.categories.length===0){list.innerHTML='<div class="empty">No categories yet.</div>';return;}
+    list.innerHTML=state.categories.map(c=>{
+      const count=state.items.filter(i=>(i.category||"")===c.name).length;
+      const builtin=DEFAULT_CATEGORIES.includes(c.name);
+      return `<div class="cat-row"><div class="cat-identity"><span class="category-dot" style="background:${escapeHtml(c.color)}"></span><div><div class="name">${escapeHtml(c.name)} ${builtin?'<span class="muted" style="font-weight:400;font-size:12px">(built-in)</span>':""}</div><div class="count">${count} item${count===1?"":"s"}</div></div></div><div class="cat-actions"><button class="btn small ghost" data-editcat="${escapeHtml(c.name)}">Edit</button><button class="btn small danger" data-delcat="${escapeHtml(c.name)}">Delete</button></div></div>`;
+    }).join("");
+  };
+  renderInto($("#cat-list")); renderInto($("#cat-list-dialog"));
 }
 function renderItems(){
   const grid = $("#grid");
@@ -591,7 +646,7 @@ function itemCardHtml(i){
     <div class="body">
       <h3>${escapeHtml(i.name||"Untitled")}</h3>
       <div class="row">
-        <span class="tag">${escapeHtml(i.category||"Uncategorized")}</span>
+        <span class="tag category-tag" style="--tag-color:${escapeHtml(getCategory(i.category||"Uncategorized").color)}">${escapeHtml(i.category||"Uncategorized")}</span>
         <span class="swatch" style="background:${escapeHtml(swatchBg)}" title="${escapeHtml(swatchBg)}"></span>
         ${colorText ? `<span class="meta">${colorText}</span>` : ""}
         ${colorHex}
@@ -711,10 +766,10 @@ async function saveItem(e){
   if(!item.category){ toast("Please pick a category"); return; }
 
   // ensure custom category exists
-  if(!state.categories.includes(item.category)){
-    state.categories.push(item.category);
-    state.categories.sort((a,b)=>a.localeCompare(b));
-    lsSet(LS_KEYS.cats, state.categories);
+  if(!state.categories.some(c=>c.name===item.category)){
+    state.categories.push({name:item.category,color:"#b9b2a7"});
+    state.categories.sort((a,b)=>a.name.localeCompare(b.name));
+    persistCategoryFile().catch(()=>{});
   }
 
   // photo
@@ -783,13 +838,13 @@ function startEditItem(id){
   state.editingItemId = id;
   $("#f-name").value = it.name || "";
   // ensure category exists in the select even if legacy
-  if(!state.categories.includes(it.category)){
-    state.categories.push(it.category);
-    state.categories.sort((a,b)=>a.localeCompare(b));
-    lsSet(LS_KEYS.cats, state.categories);
+  if(!state.categories.some(c=>c.name===it.category)){
+    state.categories.push({name:it.category,color:"#b9b2a7"});
+    state.categories.sort((a,b)=>a.name.localeCompare(b.name));
+    persistCategoryFile().catch(()=>{});
     renderCategorySelect();
   }
-  $("#f-category").value = it.category || state.categories[0];
+  $("#f-category").value = it.category || state.categories[0].name;
   $("#f-purchase").value = it.purchaseDate || "";
   $("#f-color").value = it.color || "#7a5af8";
   $("#f-colorname").value = it.colorName || "";
@@ -816,32 +871,106 @@ function startEditItem(id){
   window.scrollTo({top:0,behavior:"smooth"});
 }
 
-/* ---------- CRUD: categories ---------- */
+/* ---------- category storage and manager ---------- */
+let categoryFolderHandle=null;
+let editingCategoryName=null;
+async function ensureFolderPermission(handle, request=false){
+  if(!handle) return false;
+  try{
+    let permission=await handle.queryPermission({mode:"readwrite"});
+    if(permission!=="granted" && request) permission=await handle.requestPermission({mode:"readwrite"});
+    return permission==="granted";
+  }catch{return false;}
+}
+function showFolderStatus(message){const el=$("#category-storage-status");if(el)el.textContent=message;}
+async function persistCategoryFile(){
+  lsSet(LS_KEYS.cats,state.categories);
+  if(!categoryFolderHandle) return;
+  if(!(await ensureFolderPermission(categoryFolderHandle,true))){showFolderStatus("Folder permission needed. Choose the folder again to reconnect.");return;}
+  await writeTextFile(categoryFolderHandle,"categories.json",JSON.stringify(state.categories,null,2));
+  showFolderStatus(`Saved categories.json in “${categoryFolderHandle.name}”.`);
+}
+async function connectCategoryFolder(){
+  if(!window.showDirectoryPicker){toast("Folder access unavailable here; use JSON export/import instead");return;}
+  try{
+    const handle=await window.showDirectoryPicker({mode:"readwrite"});
+    categoryFolderHandle=handle; chosenFolder=handle;
+    await dbSaveFolderHandle(handle);
+    const file=await handle.getFileHandle("categories.json",{create:true});
+    const fileData=await file.getFile();
+    if(fileData.size){
+      const imported=JSON.parse(await fileData.text());
+      if(!Array.isArray(imported)) throw new Error("Expected a JSON array");
+      setCategories(imported);
+    }else await persistCategoryFile();
+    showFolderStatus(`Saved categories.json in “${handle.name}”.`);
+    $("#folder-status").textContent=`Selected: ${handle.name}`;
+    toast("Category folder connected");
+  }catch(error){if(error.name!=="AbortError"){console.error(error);toast("Could not read or connect that folder");}}
+}
+async function restoreCategoryFolder(){
+  if(!window.showDirectoryPicker) return;
+  try{
+    categoryFolderHandle=await dbGetFolderHandle();
+    if(!categoryFolderHandle)return;
+    chosenFolder=categoryFolderHandle;
+    if(await ensureFolderPermission(categoryFolderHandle,false)){
+      const fileHandle=await categoryFolderHandle.getFileHandle("categories.json",{create:true});
+      const fileData=await fileHandle.getFile();
+      if(fileData.size){
+        const data=JSON.parse(await fileData.text());
+        if(Array.isArray(data))setCategories(data);
+      }else await persistCategoryFile();
+      showFolderStatus(`Connected to “${categoryFolderHandle.name}”.`);
+      $("#folder-status").textContent=`Selected: ${categoryFolderHandle.name}`;
+    }else showFolderStatus(`Folder “${categoryFolderHandle.name}” is remembered. Reconnect it to grant access.`);
+  }catch(error){console.warn("Saved category folder unavailable",error);showFolderStatus("Remembered folder unavailable. Choose a folder to reconnect.");}
+}
+function openCategoryManager(){
+  renderCategoryList();
+  const dialog=$("#category-dialog");
+  if(dialog.showModal)dialog.showModal();else dialog.setAttribute("open","");
+}
+function closeCategoryManager(){
+  const dialog=$("#category-dialog");
+  if(typeof dialog.close==="function")dialog.close();else dialog.removeAttribute("open");
+}
+function resetCategoryEditor(){
+  $("#cat-form").reset();$("#c-color").value="#7a5af8";$("#c-color-preview").textContent="#7A5AF8";
+  editingCategoryName=null;$("#cat-save-btn").textContent="Add category";$("#cat-cancel-edit").classList.add("hidden");
+}
+function startEditCategory(name){
+  const c=getCategory(name);editingCategoryName=name;$("#c-name").value=c.name;$("#c-color").value=c.color;$("#c-color-preview").textContent=c.color.toUpperCase();$("#cat-save-btn").textContent="Save changes";$("#cat-cancel-edit").classList.remove("hidden");$("#c-name").focus();
+}
+function saveCategory(e){
+  e.preventDefault();const name=$("#c-name").value.trim(), color=$("#c-color").value;
+  if(!name)return;
+  if(state.categories.some(c=>c.name.toLowerCase()===name.toLowerCase()&&c.name!==editingCategoryName)){toast("That category already exists");return;}
+  const previous=editingCategoryName;
+  const next=state.categories.filter(c=>c.name!==previous&&c.name!==name);next.push({name,color});
+  if(previous&&previous!==name)state.items.forEach(i=>{if(i.category===previous)i.category=name;});
+  setCategories(next);if(previous)lsSet(LS_KEYS.items,state.items);resetCategoryEditor();toast(previous?`Category “${name}” updated`:`Category “${name}” added`);
+}
 function addCategory(name){
-  name = (name||"").trim();
-  if(!name) return;
-  if(state.categories.includes(name)){ toast("Already exists"); return; }
-  state.categories.push(name);
-  state.categories.sort((a,b)=>a.localeCompare(b));
-  lsSet(LS_KEYS.cats, state.categories);
-  toast(`Category "${name}" added`);
-  renderAll();
+  const clean=(name||"").trim();if(!clean)return;
+  if(state.categories.some(c=>c.name===clean)){toast("Already exists");return;}
+  setCategories([...state.categories,{name:clean,color:"#b9b2a7"}]);toast(`Category "${clean}" added`);
 }
 function deleteCategory(name){
-  const used = state.items.filter(i => (i.category||"") === name).length;
-  const msg = used > 0
-    ? `Delete category "${name}"? ${used} item(s) will be set to "Uncategorized".`
-    : `Delete category "${name}"?`;
-  if(!confirm(msg)) return;
-  state.items.forEach(i => { if((i.category||"") === name) i.category = "Uncategorized"; });
-  state.categories = state.categories.filter(c => c !== name);
-  // Re-add "Uncategorized" if missing so items have a valid bucket
-  if(!state.categories.includes("Uncategorized")) state.categories.unshift("Uncategorized");
-  if(state.filterCategory === name) state.filterCategory = "All";
-  lsSet(LS_KEYS.cats, state.categories);
-  lsSet(LS_KEYS.items, state.items);
-  toast(`Category "${name}" removed`);
-  renderAll();
+  const used=state.items.filter(i=>(i.category||"")===name).length;
+  const msg=used>0?`Delete category “${name}”? ${used} item(s) will be set to “Uncategorized”.`:`Delete category “${name}”?`;
+  if(!confirm(msg))return;
+  state.items.forEach(i=>{if((i.category||"")===name)i.category="Uncategorized";});
+  if(state.filterCategory===name)state.filterCategory="All";
+  setCategories(state.categories.filter(c=>c.name!==name));
+  lsSet(LS_KEYS.items,state.items);toast(`Category “${name}” removed`);
+}
+function exportCategories(){
+  const blob=new Blob([JSON.stringify(state.categories,null,2)],{type:"application/json"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="categories.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+async function importCategories(file){
+  if(!file)return;try{const imported=JSON.parse(await file.text());if(!Array.isArray(imported))throw new Error("Expected an array");setCategories(imported);toast("Categories imported");}catch(error){toast("Invalid categories JSON");}finally{$("#category-import").value="";}
 }
 
 /* ---------- CRUD: outfits ---------- */
@@ -920,8 +1049,9 @@ function bind(){
 
     try {
       chosenFolder = await window.showDirectoryPicker({ mode: "readwrite" });
+      categoryFolderHandle=chosenFolder; await dbSaveFolderHandle(chosenFolder);
       $("#folder-status").textContent = `Selected: ${chosenFolder.name}`;
-      toast("Folder selected");
+      await persistCategoryFile(); toast("Folder selected");
     } catch (error) {
       if (error.name !== "AbortError") {
         toast("Could not select that folder");
@@ -939,6 +1069,7 @@ function bind(){
   $("#f-color").addEventListener("input", e => {
     $("#f-swatch").style.background = e.target.value;
   });
+  $("#f-category").addEventListener("change", e=>{ $("#f-category-swatch").style.background=getCategory(e.target.value).color; });
   // photo
   $("#f-photo").addEventListener("change", e => {
     const f = e.target.files && e.target.files[0];
@@ -982,17 +1113,21 @@ function bind(){
     }
   });
 
-  // categories tab
-  $("#cat-form").addEventListener("submit", e => {
-    e.preventDefault();
-    addCategory($("#c-name").value);
-    $("#c-name").value = "";
-  });
-  $("#cat-list").addEventListener("click", e => {
-    const btn = e.target.closest("[data-delcat]");
-    if(!btn) return;
-    deleteCategory(btn.dataset.delcat);
-  });
+  // independent category manager dialog
+  $("#open-category-manager").addEventListener("click",openCategoryManager);
+  $("#open-category-manager-tab").addEventListener("click",openCategoryManager);
+  $("#close-category-manager").addEventListener("click",closeCategoryManager);
+  $("#category-dialog").addEventListener("click",e=>{if(e.target===$("#category-dialog"))closeCategoryManager();});
+  $("#cat-form").addEventListener("submit",saveCategory);
+  $("#cat-cancel-edit").addEventListener("click",resetCategoryEditor);
+  $("#c-color").addEventListener("input",e=>$("#c-color-preview").textContent=e.target.value.toUpperCase());
+  [$("#cat-list"),$("#cat-list-dialog")].forEach(list=>list.addEventListener("click",e=>{
+    const del=e.target.closest("[data-delcat]");if(del){deleteCategory(del.dataset.delcat);return;}
+    const edit=e.target.closest("[data-editcat]");if(edit)startEditCategory(edit.dataset.editcat);
+  }));
+  $("#category-folder-btn").addEventListener("click",connectCategoryFolder);
+  $("#category-export").addEventListener("click",exportCategories);
+  $("#category-import").addEventListener("change",e=>importCategories(e.target.files[0]));
 
   // outfits form
   $("#outfit-form").addEventListener("submit", saveOutfit);
@@ -1009,23 +1144,18 @@ function bind(){
 /* ---------- bootstrap ---------- */
 function load(){
   migrate();
-  state.categories = lsGet(LS_KEYS.cats, DEFAULT_CATEGORIES.slice());
   state.items      = lsGet(LS_KEYS.items, []);
   state.outfits    = lsGet(LS_KEYS.fits, []);
-  // Legacy category backfill: items with unknown categories are kept,
-  // but their category may not exist in state.categories. We expose them
-  // via category chips by ensuring any item.category value is included.
-  state.items.forEach(i => {
-    if(i.category && !state.categories.includes(i.category)){
-      state.categories.push(i.category);
-    }
-  });
-  state.categories = Array.from(new Set(state.categories)).sort((a,b)=>a.localeCompare(b));
-  if(!state.categories.includes("Uncategorized")) state.categories.unshift("Uncategorized");
-  lsSet(LS_KEYS.cats, state.categories);
+  const stored=lsGet(LS_KEYS.cats,DEFAULT_CATEGORIES);
+  const mapped=(Array.isArray(stored)?stored:DEFAULT_CATEGORIES).map(normalizeCategory).filter(Boolean);
+  state.items.forEach(i=>{if(i.category&&!mapped.some(c=>c.name===i.category))mapped.push({name:i.category,color:"#b9b2a7"});});
+  state.categories=mapped;
+  if(!state.categories.some(c=>c.name==="Uncategorized"))state.categories.unshift({name:"Uncategorized",color:"#b9b2a7"});
+  lsSet(LS_KEYS.cats,state.categories);
 
   bind();
   renderAll();
+  restoreCategoryFolder();
 }
 load();
 </script>
