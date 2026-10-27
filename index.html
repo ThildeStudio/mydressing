@@ -95,6 +95,10 @@
     width:22px;height:22px;border-radius:50%;
     border:1px solid var(--line);
   }
+  .category-picker{display:flex;flex-wrap:wrap;gap:7px;padding:10px;background:#fff;border:1px solid var(--line);border-radius:10px;min-height:44px}
+  .category-choice{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:999px;background:white;padding:6px 10px;color:var(--ink);font:inherit;font-size:13px;cursor:pointer}
+  .category-choice[aria-pressed="true"]{border-color:var(--tag-color);background:color-mix(in srgb,var(--tag-color) 17%,white);box-shadow:inset 0 0 0 1px var(--tag-color)}
+  .category-choice:focus-visible{outline:3px solid var(--accent-soft);outline-offset:2px}
   /* photo */
   .photo-zone{
     border:1px dashed var(--line);border-radius:10px;
@@ -258,23 +262,14 @@
         <input id="f-name" type="text" required placeholder="e.g. Blue linen shirt" />
       </div>
 
-      <div class="field">
-        <label for="f-category">Category <button type="button" id="open-category-manager" class="inline-link">Manage</button></label>
-        <div class="row-gap-sm"><select id="f-category" required></select><span id="f-category-swatch" class="category-dot" aria-hidden="true"></span></div>
+      <div class="field full">
+        <label>Categories <button type="button" id="open-category-manager" class="inline-link">Manage</button></label>
+        <div id="f-categories" class="category-picker" role="group" aria-label="Select one or more categories"></div>
       </div>
 
       <div class="field">
         <label for="f-purchase">Purchase date</label>
         <input id="f-purchase" type="date" />
-      </div>
-
-      <div class="field">
-        <label>Color</label>
-        <div class="color-row">
-          <span class="swatch" id="f-swatch" style="background:#7a5af8"></span>
-          <input id="f-color" type="color" value="#7a5af8" aria-label="Pick color" />
-          <input id="f-colorname" type="text" placeholder="Color name (e.g. Indigo)" />
-        </div>
       </div>
 
       <div class="field full">
@@ -557,7 +552,7 @@ async function saveCopyToFolder(item, photoBlob) {
 }
 
 const state = {
-  items: [],      // {id,name,category,color,colorName,purchaseDate,notes,photoId,createdAt}
+  items: [],      // {id,name,categories:[],purchaseDate,notes,photoId,createdAt}
   categories: [],
   outfits: [],    // {id,name,itemIds:[],createdAt}
   filterCategory: "All",
@@ -569,13 +564,18 @@ const state = {
 };
 
 /* ---------- rendering ---------- */
-function renderCategorySelect(){
-  const sel = $("#f-category");
-  const current = sel.value;
-  sel.innerHTML = state.categories
-    .map(c => `<option value="${escapeHtml(c.name)}">${escapeHtml(c.name)}</option>`).join("");
-  if(state.categories.some(c=>c.name===current)) sel.value=current;
-  const marker=$("#f-category-swatch"); if(marker)marker.style.background=getCategory(sel.value).color;
+function renderItemCategoryPicker(selectedOverride){
+  const wrap=$("#f-categories");
+  if(!wrap)return;
+  const selected=new Set(selectedOverride || [...wrap.querySelectorAll('[aria-pressed="true"]')].map(btn=>btn.dataset.selectCat));
+  wrap.innerHTML=state.categories.map(c=>`<button type="button" class="category-choice" data-select-cat="${escapeHtml(c.name)}" aria-pressed="${selected.has(c.name)}" style="--tag-color:${escapeHtml(c.color)}"><span class="category-dot" style="background:${escapeHtml(c.color)}"></span>${escapeHtml(c.name)}</button>`).join("") || '<span class="muted">Add categories in Manage to organize items.</span>';
+}
+function selectedItemCategories(){
+  return [...document.querySelectorAll('#f-categories [aria-pressed="true"]')].map(btn=>btn.dataset.selectCat).filter(name=>state.categories.some(c=>c.name===name));
+}
+function getItemCategories(item){
+  const values=Array.isArray(item.categories)?item.categories:(item.category?[item.category]:[]);
+  return values.filter((name,index)=>typeof name==='string'&&values.indexOf(name)===index&&state.categories.some(c=>c.name===name));
 }
 function renderCategoryChips(){
   const wrap = $("#cat-chips");
@@ -594,7 +594,7 @@ function renderCategoryList(){
     if(!list) return;
     if(state.categories.length===0){list.innerHTML='<div class="empty">No categories yet.</div>';return;}
     list.innerHTML=state.categories.map(c=>{
-      const count=state.items.filter(i=>(i.category||"")===c.name).length;
+      const count=state.items.filter(i=>getItemCategories(i).includes(c.name)).length;
       const builtin=DEFAULT_CATEGORIES.includes(c.name);
       return `<div class="cat-row"><div class="cat-identity"><span class="category-dot" style="background:${escapeHtml(c.color)}"></span><div><div class="name">${escapeHtml(c.name)} ${builtin?'<span class="muted" style="font-weight:400;font-size:12px">(built-in)</span>':""}</div><div class="count">${count} item${count===1?"":"s"}</div></div></div><div class="cat-actions"><button class="btn small ghost" data-editcat="${escapeHtml(c.name)}">Edit</button><button class="btn small danger" data-delcat="${escapeHtml(c.name)}">Delete</button></div></div>`;
     }).join("");
@@ -606,12 +606,12 @@ function renderItems(){
   const empty = $("#empty");
   const term = state.search.trim().toLowerCase();
   const list = state.items.filter(i => {
-    const catOk = state.filterCategory === "All" || (i.category||"") === state.filterCategory;
+    const cats=getItemCategories(i);
+    const catOk = state.filterCategory === "All" || cats.includes(state.filterCategory);
     if(!catOk) return false;
     if(!term) return true;
     return (i.name||"").toLowerCase().includes(term)
-      || (i.category||"").toLowerCase().includes(term)
-      || (i.colorName||"").toLowerCase().includes(term)
+      || cats.some(name=>name.toLowerCase().includes(term))
       || (i.notes||"").toLowerCase().includes(term);
   }).sort((a,b)=> (b.createdAt||0) - (a.createdAt||0));
 
@@ -636,21 +636,18 @@ function renderItems(){
   });
 }
 function itemCardHtml(i){
-  const swatchBg = i.color || "#cccccc";
-  const colorText = i.colorName ? escapeHtml(i.colorName) : "";
-  const colorHex  = i.color ? `<span class="muted">${escapeHtml(i.color)}</span>` : "";
-  const dateTxt   = i.purchaseDate ? `Purchased ${fmtDate(i.purchaseDate)}` : "";
+  const categories=getItemCategories(i);
+  const dateTxt=i.purchaseDate?`Purchased ${fmtDate(i.purchaseDate)}`:"";
+  const categoryTags=categories.map(name=>{
+    const category=getCategory(name);
+    return `<span class="tag category-tag" style="--tag-color:${escapeHtml(category.color)}">${escapeHtml(name)}</span>`;
+  }).join("");
   return `
   <article class="card" data-id="${i.id}">
     <div class="photo" data-photo-for="${i.id}"></div>
     <div class="body">
       <h3>${escapeHtml(i.name||"Untitled")}</h3>
-      <div class="row">
-        <span class="tag category-tag" style="--tag-color:${escapeHtml(getCategory(i.category||"Uncategorized").color)}">${escapeHtml(i.category||"Uncategorized")}</span>
-        <span class="swatch" style="background:${escapeHtml(swatchBg)}" title="${escapeHtml(swatchBg)}"></span>
-        ${colorText ? `<span class="meta">${colorText}</span>` : ""}
-        ${colorHex}
-      </div>
+      <div class="row">${categoryTags || '<span class="meta">Uncategorized</span>'}</div>
       <div class="meta">${dateTxt}</div>
       ${i.notes ? `<div class="meta" style="white-space:pre-wrap">${escapeHtml(i.notes)}</div>` : ""}
     </div>
@@ -728,7 +725,7 @@ function renderOutfitPicker(){
   });
 }
 function renderAll(){
-  renderCategorySelect();
+  renderItemCategoryPicker();
   renderCategoryChips();
   renderCategoryList();
   renderItems();
@@ -748,10 +745,8 @@ function readFormItem(){
   return {
     id: state.editingItemId || uid(),
     name: $("#f-name").value.trim(),
-    category: $("#f-category").value,
+    categories: selectedItemCategories(),
     purchaseDate: $("#f-purchase").value || null,
-    color: $("#f-color").value || null,
-    colorName: $("#f-colorname").value.trim() || null,
     notes: $("#f-notes").value.trim() || null,
     photoId: null, // set in save if applicable
     createdAt: state.editingItemId
@@ -763,14 +758,8 @@ async function saveItem(e){
   e.preventDefault();
   const item = readFormItem();
   if(!item.name){ toast("Please enter a name"); return; }
-  if(!item.category){ toast("Please pick a category"); return; }
-
-  // ensure custom category exists
-  if(!state.categories.some(c=>c.name===item.category)){
-    state.categories.push({name:item.category,color:"#b9b2a7"});
-    state.categories.sort((a,b)=>a.name.localeCompare(b.name));
-    persistCategoryFile().catch(()=>{});
-  }
+  item.categories=item.categories.filter(name=>state.categories.some(c=>c.name===name));
+  if(!item.categories.length){ toast("Please select at least one category"); return; }
 
   // photo
   const existing = state.editingItemId
@@ -809,8 +798,7 @@ async function saveItem(e){
 }
 function resetItemForm(){
   $("#item-form").reset();
-  $("#f-swatch").style.background = "#7a5af8";
-  $("#f-color").value = "#7a5af8";
+  renderItemCategoryPicker([]);
   $("#f-preview").style.display = "none";
   $("#f-preview").src = "";
   state.editingItemId = null;
@@ -837,18 +825,9 @@ function startEditItem(id){
   if(!it) return;
   state.editingItemId = id;
   $("#f-name").value = it.name || "";
-  // ensure category exists in the select even if legacy
-  if(!state.categories.some(c=>c.name===it.category)){
-    state.categories.push({name:it.category,color:"#b9b2a7"});
-    state.categories.sort((a,b)=>a.name.localeCompare(b.name));
-    persistCategoryFile().catch(()=>{});
-    renderCategorySelect();
-  }
-  $("#f-category").value = it.category || state.categories[0].name;
+  const categories=getItemCategories(it);
+  renderItemCategoryPicker(categories);
   $("#f-purchase").value = it.purchaseDate || "";
-  $("#f-color").value = it.color || "#7a5af8";
-  $("#f-colorname").value = it.colorName || "";
-  $("#f-swatch").style.background = it.color || "#cccccc";
   $("#f-notes").value = it.notes || "";
   // photo preview
   if(it.photoId){
@@ -948,7 +927,10 @@ function saveCategory(e){
   if(state.categories.some(c=>c.name.toLowerCase()===name.toLowerCase()&&c.name!==editingCategoryName)){toast("That category already exists");return;}
   const previous=editingCategoryName;
   const next=state.categories.filter(c=>c.name!==previous&&c.name!==name);next.push({name,color});
-  if(previous&&previous!==name)state.items.forEach(i=>{if(i.category===previous)i.category=name;});
+  if(previous&&previous!==name){
+    state.items.forEach(i=>{i.categories=getItemCategories(i).map(category=>category===previous?name:category);});
+    if(state.filterCategory===previous)state.filterCategory=name;
+  }
   setCategories(next);if(previous)lsSet(LS_KEYS.items,state.items);resetCategoryEditor();toast(previous?`Category “${name}” updated`:`Category “${name}” added`);
 }
 function addCategory(name){
@@ -957,10 +939,10 @@ function addCategory(name){
   setCategories([...state.categories,{name:clean,color:"#b9b2a7"}]);toast(`Category "${clean}" added`);
 }
 function deleteCategory(name){
-  const used=state.items.filter(i=>(i.category||"")===name).length;
-  const msg=used>0?`Delete category “${name}”? ${used} item(s) will be set to “Uncategorized”.`:`Delete category “${name}”?`;
+  const used=state.items.filter(i=>getItemCategories(i).includes(name)).length;
+  const msg=used>0?`Delete category “${name}”? It will be removed from ${used} item(s).`:`Delete category “${name}”?`;
   if(!confirm(msg))return;
-  state.items.forEach(i=>{if((i.category||"")===name)i.category="Uncategorized";});
+  state.items.forEach(i=>{i.categories=getItemCategories(i).filter(category=>category!==name);});
   if(state.filterCategory===name)state.filterCategory="All";
   setCategories(state.categories.filter(c=>c.name!==name));
   lsSet(LS_KEYS.items,state.items);toast(`Category “${name}” removed`);
@@ -1065,11 +1047,11 @@ function bind(){
   $("#item-form").addEventListener("submit", saveItem);
   $("#cancel-edit").addEventListener("click", resetItemForm);
 
-  // color input -> swatch preview
-  $("#f-color").addEventListener("input", e => {
-    $("#f-swatch").style.background = e.target.value;
+  $("#f-categories").addEventListener("click",e=>{
+    const chip=e.target.closest('[data-select-cat]');
+    if(!chip)return;
+    chip.setAttribute('aria-pressed',chip.getAttribute('aria-pressed')==='true'?'false':'true');
   });
-  $("#f-category").addEventListener("change", e=>{ $("#f-category-swatch").style.background=getCategory(e.target.value).color; });
   // photo
   $("#f-photo").addEventListener("change", e => {
     const f = e.target.files && e.target.files[0];
@@ -1148,10 +1130,23 @@ function load(){
   state.outfits    = lsGet(LS_KEYS.fits, []);
   const stored=lsGet(LS_KEYS.cats,DEFAULT_CATEGORIES);
   const mapped=(Array.isArray(stored)?stored:DEFAULT_CATEGORIES).map(normalizeCategory).filter(Boolean);
-  state.items.forEach(i=>{if(i.category&&!mapped.some(c=>c.name===i.category))mapped.push({name:i.category,color:"#b9b2a7"});});
+  state.items=state.items.map(item=>{
+    const legacyCategory=item.category;
+    const isLegacyArray=Array.isArray(item.categories);
+    const categories=isLegacyArray?item.categories:(legacyCategory?[legacyCategory]:[]);
+    const unique=categories.filter((name,index)=>typeof name==='string'&&categories.indexOf(name)===index);
+    if(!isLegacyArray&&legacyCategory&&!mapped.some(c=>c.name===legacyCategory))mapped.push({name:legacyCategory,color:"#b9b2a7"});
+    const validCategories=isLegacyArray?unique.filter(name=>mapped.some(c=>c.name===name)):unique;
+    const migrated={...item,categories:validCategories};
+    delete migrated.category;
+    delete migrated.color;
+    delete migrated.colorName;
+    return migrated;
+  });
   state.categories=mapped;
   if(!state.categories.some(c=>c.name==="Uncategorized"))state.categories.unshift({name:"Uncategorized",color:"#b9b2a7"});
   lsSet(LS_KEYS.cats,state.categories);
+  lsSet(LS_KEYS.items,state.items);
 
   bind();
   renderAll();
