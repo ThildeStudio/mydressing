@@ -287,6 +287,13 @@
       <input type="search" id="search" placeholder="Search items…" />
     </div>
 
+    <div class="row-gap-sm" style="margin:14px 0 6px">
+      <button type="button" class="btn ghost" id="choose-folder">
+        Choose phone folder
+      </button>
+      <span id="folder-status" class="muted">No folder selected.</span>
+    </div>
+
     <div id="grid" class="grid"></div>
     <div id="empty" class="empty hidden">No items yet. Add your first piece above.</div>
   </section>
@@ -444,6 +451,53 @@ function fmtDate(iso){
 }
 
 /* ---------- state ---------- */
+
+/* ---------- optional copy to a chosen device folder ---------- */
+let chosenFolder = null;
+
+async function writeTextFile(folder, filename, text) {
+  const handle = await folder.getFileHandle(filename, { create: true });
+  const writable = await handle.createWritable();
+  await writable.write(text);
+  await writable.close();
+}
+
+async function saveCopyToFolder(item, photoBlob) {
+  if (!chosenFolder) return;
+
+  // Save a photo copy when the item has a photo.
+  if (photoBlob) {
+    const photosFolder = await chosenFolder.getDirectoryHandle("photos", {
+      create: true
+    });
+
+    const safeName = (item.name || "wardrobe-item")
+      .replace(/[<>:"/\\|?*\u0000-\u001F]/g, "_")
+      .trim()
+      .slice(0, 80) || "wardrobe-item";
+
+    const extension = photoBlob.type === "image/png" ? ".png"
+      : photoBlob.type === "image/webp" ? ".webp"
+      : photoBlob.type === "image/gif" ? ".gif"
+      : ".jpg";
+
+    const photoHandle = await photosFolder.getFileHandle(
+      `${safeName}-${item.id}${extension}`,
+      { create: true }
+    );
+    const writable = await photoHandle.createWritable();
+    await writable.write(photoBlob);
+    await writable.close();
+  }
+
+  // Keep an up-to-date list of categories in the selected folder.
+  await writeTextFile(
+    chosenFolder,
+    "categories.json",
+    JSON.stringify(state.categories, null, 2)
+  );
+}
+
 const state = {
   items: [],      // {id,name,category,color,colorName,purchaseDate,notes,photoId,createdAt}
   categories: [],
@@ -684,6 +738,17 @@ async function saveItem(e){
   }
   lsSet(LS_KEYS.items, state.items);
 
+  // Save a copy outside browser storage if a folder was selected.
+  if (chosenFolder) {
+    try {
+      const photoBlob = item.photoId ? await dbGetPhoto(item.photoId) : null;
+      await saveCopyToFolder(item, photoBlob);
+    } catch (error) {
+      console.error("Folder copy failed:", error);
+      toast("Item saved, but folder copy failed");
+    }
+  }
+
   resetItemForm();
   renderAll();
 }
@@ -846,6 +911,23 @@ function switchTab(name){
 
 /* ---------- bindings ---------- */
 function bind(){
+    // Choose a folder for optional photo/category copies
+    $("#choose-folder").addEventListener("click", async () => {
+    if (!window.showDirectoryPicker) {
+      toast("Folder access isn't supported by this browser");
+      return;
+    }
+
+    try {
+      chosenFolder = await window.showDirectoryPicker({ mode: "readwrite" });
+      $("#folder-status").textContent = `Selected: ${chosenFolder.name}`;
+      toast("Folder selected");
+    } catch (error) {
+      if (error.name !== "AbortError") {
+        toast("Could not select that folder");
+      }
+    }
+  });
   // tabs
   $$(".tab").forEach(t => t.addEventListener("click", ()=> switchTab(t.dataset.tab)));
 
