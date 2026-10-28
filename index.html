@@ -298,6 +298,10 @@
       <input type="search" id="search" placeholder="Search items…" />
     </div>
 
+    <div id="folder-reconnect-banner" class="storage-card hidden" role="status" style="margin:12px 0 6px">
+      <div><strong>Folder access needed</strong><p id="folder-reconnect-message" class="muted">Reconnect your saved folder to reload wardrobe items and photos.</p></div>
+      <button type="button" id="reconnect-folder" class="btn small">Reconnect folder</button>
+    </div>
     <div class="row-gap-sm" style="margin:14px 0 6px">
       <button type="button" class="btn ghost" id="choose-folder">
         Choose phone folder
@@ -517,38 +521,75 @@ async function writeTextFile(folder, filename, text) {
 
 async function saveCopyToFolder(item, photoBlob) {
   if (!chosenFolder) return;
-
-  // Save a photo copy when the item has a photo.
+  const itemsFolder = await chosenFolder.getDirectoryHandle("items", {create:true});
+  const photosFolder = await chosenFolder.getDirectoryHandle("photos", {create:true});
+  let photoFile = item.photoFile || state.items.find(existing => existing.id === item.id)?.photoFile || null;
+  if (photoFile) item.photoFile = photoFile;
   if (photoBlob) {
-    const photosFolder = await chosenFolder.getDirectoryHandle("photos", {
-      create: true
-    });
-
-    const safeName = (item.name || "wardrobe-item")
-      .replace(/[<>:"/\\|?*\u0000-\u001F]/g, "_")
-      .trim()
-      .slice(0, 80) || "wardrobe-item";
-
     const extension = photoBlob.type === "image/png" ? ".png"
       : photoBlob.type === "image/webp" ? ".webp"
-      : photoBlob.type === "image/gif" ? ".gif"
-      : ".jpg";
-
-    const photoHandle = await photosFolder.getFileHandle(
-      `${safeName}-${item.id}${extension}`,
-      { create: true }
-    );
-    const writable = await photoHandle.createWritable();
+      : photoBlob.type === "image/gif" ? ".gif" : ".jpg";
+    const photoName = `${item.id}${extension}`;
+    const handle = await photosFolder.getFileHandle(photoName, {create:true});
+    const writable = await handle.createWritable();
     await writable.write(photoBlob);
     await writable.close();
+    photoFile = `photos/${photoName}`;
+    item.photoFile = photoFile;
   }
+  const metadata = {...item, photoFile};
+  const handle = await itemsFolder.getFileHandle(`${item.id}.json`, {create:true});
+  const writable = await handle.createWritable();
+  await writable.write(JSON.stringify(metadata, null, 2));
+  await writable.close();
+  await writeTextFile(chosenFolder, "categories.json", JSON.stringify(state.categories, null, 2));
+}
 
-  // Keep an up-to-date list of categories in the selected folder.
-  await writeTextFile(
-    chosenFolder,
-    "categories.json",
-    JSON.stringify(state.categories, null, 2)
-  );
+async function readItemsFromFolder(folder) {
+  const restored = [];
+  let itemsFolder;
+  try { itemsFolder = await folder.getDirectoryHandle("items"); }
+  catch(error) { if(error.name === "NotFoundError") return restored; throw error; }
+  for await (const [filename, entry] of itemsFolder.entries()) {
+    if (entry.kind !== "file" || !filename.toLowerCase().endsWith(".json")) continue;
+    try {
+      const file = await entry.getFile();
+      const item = JSON.parse(await file.text());
+      if (!item || typeof item.id !== "string") continue;
+      const photoPath = item.photoFile || item.photoPath || null;
+      if (photoPath) {
+        const parts = photoPath.split("/");
+        let photoFolder = folder;
+        for (const part of parts.slice(0, -1)) photoFolder = await photoFolder.getDirectoryHandle(part);
+        const photoHandle = await photoFolder.getFileHandle(parts[parts.length - 1]);
+        const photoBlob = await photoHandle.getFile();
+        const photoId = item.photoId || item.id;
+        await dbPutPhoto(photoId, photoBlob);
+        item.photoId = photoId;
+      }
+      if (photoPath) item.photoFile = photoPath;
+      delete item.photoPath;
+      restored.push(item);
+    } catch(error) { console.warn("Skipping unreadable wardrobe item file", filename, error); }
+  }
+  return restored;
+}
+
+async function loadFolderItemsAndMerge() {
+  if (!chosenFolder) return;
+  const fromFolder = await readItemsFromFolder(chosenFolder);
+  const merged = new Map((Array.isArray(state.items) ? state.items : []).map(item => [item.id, item]));
+  for (const item of fromFolder) merged.set(item.id, {...merged.get(item.id), ...item});
+  state.items = Array.from(merged.values());
+  lsSet(LS_KEYS.items, state.items);
+  // Import legacy browser-only records into a newly selected folder without duplicating IDs.
+  const inFolder = new Set(fromFolder.map(item => item.id));
+  for (const item of state.items) {
+    if (inFolder.has(item.id)) continue;
+    const photoBlob = item.photoId ? await dbGetPhoto(item.photoId) : null;
+    await saveCopyToFolder(item, photoBlob);
+  }
+  renderAll();
 }
 
 const state = {
@@ -812,6 +853,14 @@ async function deleteItem(id){
   if(!confirm(`Delete "${it.name}"? This also removes it from any outfits.`)) return;
   state.items = state.items.filter(x=>x.id!==id);
   if(it.photoId){ try{ await dbDeletePhoto(it.photoId); }catch{} }
+  lsSet(LS_KEYS.items, state.items);
+  if(chosenFolder){
+    try{
+      const itemsFolder=await chosenFolder.getDirectoryHandle("items");
+      await itemsFolder.removeEntry(`${id}.json`);
+    }catch{}
+    if(it.photoFile){try{const parts=it.photoFile.split("/");let dir=chosenFolder;for(const part of parts.slice(0,-1))dir=await dir.getDirectoryHandle(part);await dir.removeEntry(parts[parts.length-1]);}catch{}}
+  }
   // remove from outfits
   state.outfits.forEach(o => { o.itemIds = o.itemIds.filter(x=>x!==id); });
   lsSet(LS_KEYS.items, state.items);
@@ -862,30 +911,56 @@ async function ensureFolderPermission(handle, request=false){
   }catch{return false;}
 }
 function showFolderStatus(message){const el=$("#category-storage-status");if(el)el.textContent=message;}
+function showReconnectBanner(message){
+  const banner=$("#folder-reconnect-banner");
+  if(banner){$("#folder-reconnect-message").textContent=message;banner.classList.remove("hidden");}
+}
+function hideReconnectBanner(){const banner=$("#folder-reconnect-banner");if(banner)banner.classList.add("hidden");}
 async function persistCategoryFile(){
   lsSet(LS_KEYS.cats,state.categories);
   if(!categoryFolderHandle) return;
-  if(!(await ensureFolderPermission(categoryFolderHandle,true))){showFolderStatus("Folder permission needed. Choose the folder again to reconnect.");return;}
+  if(!(await ensureFolderPermission(categoryFolderHandle,false))){showFolderStatus("Folder permission needed. Reconnect the folder to save categories.");return;}
   await writeTextFile(categoryFolderHandle,"categories.json",JSON.stringify(state.categories,null,2));
   showFolderStatus(`Saved categories.json in “${categoryFolderHandle.name}”.`);
 }
+async function activateFolder(handle, requestPermission=false){
+  categoryFolderHandle=handle; chosenFolder=handle;
+  await dbSaveFolderHandle(handle);
+  const granted=await ensureFolderPermission(handle,requestPermission);
+  if(!granted){
+    showFolderStatus(`Folder “${handle.name}” is remembered. Reconnect it to grant access.`);
+    showReconnectBanner(`“${handle.name}” is remembered, but browser permission is needed to load or save items and photos.`);
+    $("#folder-status").textContent=`Remembered: ${handle.name} (reconnect required)`;
+    return false;
+  }
+  hideReconnectBanner();
+  $("#folder-status").textContent=`Selected: ${handle.name}`;
+  const catHandle=await handle.getFileHandle("categories.json",{create:true});
+  const catFile=await catHandle.getFile();
+  if(catFile.size){const cats=JSON.parse(await catFile.text());if(Array.isArray(cats))setCategories(cats);}
+  else await persistCategoryFile();
+  await loadFolderItemsAndMerge();
+  showFolderStatus(`Connected to “${handle.name}”. Items and photos reload from this folder.`);
+  return true;
+}
 async function connectCategoryFolder(){
-  if(!window.showDirectoryPicker){toast("Folder access unavailable here; use JSON export/import instead");return;}
+  if(!window.showDirectoryPicker){toast("Folder access unavailable here; browser storage and JSON export/import remain available");return;}
   try{
     const handle=await window.showDirectoryPicker({mode:"readwrite"});
-    categoryFolderHandle=handle; chosenFolder=handle;
-    await dbSaveFolderHandle(handle);
-    const file=await handle.getFileHandle("categories.json",{create:true});
-    const fileData=await file.getFile();
-    if(fileData.size){
-      const imported=JSON.parse(await fileData.text());
-      if(!Array.isArray(imported)) throw new Error("Expected a JSON array");
-      setCategories(imported);
-    }else await persistCategoryFile();
-    showFolderStatus(`Saved categories.json in “${handle.name}”.`);
-    $("#folder-status").textContent=`Selected: ${handle.name}`;
-    toast("Category folder connected");
+    await activateFolder(handle,true);
+    toast("Folder connected");
   }catch(error){if(error.name!=="AbortError"){console.error(error);toast("Could not read or connect that folder");}}
+}
+async function reconnectSavedFolder(){
+  if(!categoryFolderHandle){await connectCategoryFolder();return;}
+  try{
+    // Invoke requestPermission directly from this click handler to preserve the required user gesture.
+    const permission=await categoryFolderHandle.requestPermission({mode:"readwrite"});
+    if(permission==="granted"){
+      await activateFolder(categoryFolderHandle,false);
+      toast("Folder reconnected and items reloaded");
+    }else showReconnectBanner("Permission was not granted. Click Reconnect folder and allow access to continue.");
+  }catch(error){console.error("Folder reconnect failed",error);showReconnectBanner("Could not open the remembered folder. Choose it again with the folder button.");}
 }
 async function restoreCategoryFolder(){
   if(!window.showDirectoryPicker) return;
@@ -893,17 +968,13 @@ async function restoreCategoryFolder(){
     categoryFolderHandle=await dbGetFolderHandle();
     if(!categoryFolderHandle)return;
     chosenFolder=categoryFolderHandle;
-    if(await ensureFolderPermission(categoryFolderHandle,false)){
-      const fileHandle=await categoryFolderHandle.getFileHandle("categories.json",{create:true});
-      const fileData=await fileHandle.getFile();
-      if(fileData.size){
-        const data=JSON.parse(await fileData.text());
-        if(Array.isArray(data))setCategories(data);
-      }else await persistCategoryFile();
-      showFolderStatus(`Connected to “${categoryFolderHandle.name}”.`);
-      $("#folder-status").textContent=`Selected: ${categoryFolderHandle.name}`;
-    }else showFolderStatus(`Folder “${categoryFolderHandle.name}” is remembered. Reconnect it to grant access.`);
-  }catch(error){console.warn("Saved category folder unavailable",error);showFolderStatus("Remembered folder unavailable. Choose a folder to reconnect.");}
+    if(await ensureFolderPermission(categoryFolderHandle,false)) await activateFolder(categoryFolderHandle,false);
+    else {
+      showFolderStatus(`Folder “${categoryFolderHandle.name}” is remembered. Reconnect it to grant access.`);
+      $("#folder-status").textContent=`Remembered: ${categoryFolderHandle.name} (reconnect required)`;
+      showReconnectBanner(`“${categoryFolderHandle.name}” is remembered. Reconnect it to reload saved items and photos.`);
+    }
+  }catch(error){console.warn("Saved folder unavailable",error);showFolderStatus("Remembered folder unavailable. Choose a folder to reconnect.");showReconnectBanner("The saved folder is unavailable. Choose it again to restore access.");}
 }
 function openCategoryManager(){
   renderCategoryList();
@@ -1022,24 +1093,9 @@ function switchTab(name){
 
 /* ---------- bindings ---------- */
 function bind(){
-    // Choose a folder for optional photo/category copies
-    $("#choose-folder").addEventListener("click", async () => {
-    if (!window.showDirectoryPicker) {
-      toast("Folder access isn't supported by this browser");
-      return;
-    }
-
-    try {
-      chosenFolder = await window.showDirectoryPicker({ mode: "readwrite" });
-      categoryFolderHandle=chosenFolder; await dbSaveFolderHandle(chosenFolder);
-      $("#folder-status").textContent = `Selected: ${chosenFolder.name}`;
-      await persistCategoryFile(); toast("Folder selected");
-    } catch (error) {
-      if (error.name !== "AbortError") {
-        toast("Could not select that folder");
-      }
-    }
-  });
+    // Select the folder used for durable item, photo and category files.
+  $("#choose-folder").addEventListener("click", connectCategoryFolder);
+  $("#reconnect-folder").addEventListener("click", reconnectSavedFolder);
   // tabs
   $$(".tab").forEach(t => t.addEventListener("click", ()=> switchTab(t.dataset.tab)));
 
@@ -1124,7 +1180,8 @@ function bind(){
 }
 
 /* ---------- bootstrap ---------- */
-function load(){
+async function load(){
+  try{if(navigator.storage && navigator.storage.persist) await navigator.storage.persist();}catch(error){console.warn("Persistent storage request was unavailable",error);}
   migrate();
   state.items      = lsGet(LS_KEYS.items, []);
   state.outfits    = lsGet(LS_KEYS.fits, []);
@@ -1150,9 +1207,9 @@ function load(){
 
   bind();
   renderAll();
-  restoreCategoryFolder();
+  await restoreCategoryFolder();
 }
-load();
+load().catch(error=>{console.error("Wardrobe startup failed",error);renderAll();});
 </script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"8607d2a720d14b038279025b2b5a82e5","spa":2}' crossorigin="anonymous"></script>
 </body>
